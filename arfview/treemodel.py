@@ -4,6 +4,11 @@ import time
 import sys
 import os
 
+
+def remove():
+    print("wut")
+
+
 class TreeNode:
     def __init__(self,name,parent=None):
         self._name = name
@@ -34,21 +39,19 @@ class TreeNode:
             return self._parent._children.index(self)
         else:
             return 0
-        
-            
-
 
 class TreeModel(QtCore.QAbstractItemModel):
     def __init__(self, filenames, parent=None):
         super(TreeModel, self).__init__(parent)
         self.files = []
         self.roots = []
+        #self.context_menu = QtGui.QMenu
         for f in filenames:
             self.files.append(h5py.File(f,'r+'))
             abspath = os.path.abspath(f)
             self.roots.append(TreeNode(abspath))
             TreeModel.populate_tree(self.roots[-1],self.files[-1])
-
+        
     def get_entry(self, node):
         """Gets arf entry from node"""
         #finding file
@@ -63,7 +66,6 @@ class TreeModel(QtCore.QAbstractItemModel):
         #retrieving entry
         return self.files[file_idx][node.name()]
             
-        
     @staticmethod 
     def populate_tree(node, h5group):
         if isinstance(h5group,h5py.File): 
@@ -78,7 +80,6 @@ class TreeModel(QtCore.QAbstractItemModel):
                 if isinstance(h5obj,h5py.Group):
                     TreeModel.populate_tree(new_node, h5obj)
         
-
     def rowCount(self, parent):
         if not parent.isValid():
             return len(self.files)
@@ -89,6 +90,9 @@ class TreeModel(QtCore.QAbstractItemModel):
     def columnCount(self,parent):
         return 1
 
+    def flags(self, index):
+        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        
     def data(self,index,role):
         if not index.isValid():
             return None
@@ -96,7 +100,21 @@ class TreeModel(QtCore.QAbstractItemModel):
         if role == QtCore.Qt.DisplayRole:
             return node.name().split('/')[-1]
 
-
+    def delete(self, indices):
+        for index in indices:
+            self.dataChanged.emit(index,index)
+            
+    def setData(self, index, value, role = QtCore.Qt.EditRole):
+        if role == QtCore.Qt.EditRole:
+            if '/' in value:
+                QtGui.QMessageBox.critical(self,"", "Entry name cannot contain '/' character.", QMessageBox.Ok)
+                return False
+                
+            old_name = index.internalPointer().name()
+            
+            
+            return False
+            
     def index(self, row, column, parent):
         if not parent.isValid():
             return self.createIndex(row,column,self.roots[row])
@@ -128,9 +146,32 @@ class TreeModel(QtCore.QAbstractItemModel):
     def headerData(self,section,orientation,role):
         return "File Tree"
 
+class ArfTreeView(QtGui.QTreeView):
+    def __init__(self, *args, **kwargs):
+        super(ArfTreeView, self).__init__(*args, **kwargs)
+        self.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        self.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+        # delete action
+        delete = QtGui.QAction(self)
+        delete.setText("Delete")
+        delete.triggered.connect(self.delete_selected)
+        self.addAction(delete)
+        # rename action
+        rename= QtGui.QAction(self)
+        rename.setText("Rename")
+        rename.triggered.connect(self.rename_selected)
+        self.addAction(rename)
 
-
-
+        
+    def delete_selected(self):
+        pass
+        #self.model().delete(self.selectedIndexes())
+            
+    def rename_selected(self):
+        selected = self.selectedIndexes()
+        if len(selected) == 1:
+            self.edit(selected[0])
+            
         
 filenames = ['/home/pmalonis/test2.arf','/home/pmalonis/song.arf']
 # root = TreeNode('/')
@@ -138,6 +179,6 @@ filenames = ['/home/pmalonis/test2.arf','/home/pmalonis/song.arf']
 #     root.addChild(TreeNode(key))
 
 model = TreeModel(filenames)
-treeView = QtGui.QTreeView()
-treeView.show()
+treeView = ArfTreeView()
 treeView.setModel(model)
+treeView.show()
