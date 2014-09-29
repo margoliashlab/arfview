@@ -3,6 +3,8 @@ import h5py
 import time
 import sys
 import os
+import arf
+import subprocess
 
 class TreeNode:
     def __init__(self,name, type, parent=None):
@@ -75,8 +77,8 @@ class TreeModel(QtCore.QAbstractItemModel):
         
     def getEntry(self, node):
         """Gets arf entry from node"""
-        file_idx = self.get_file_idx(node)
-        return self.files[file_idx][node.name()]
+        file = self.getFile(node)
+        return file[node.name()]
             
     @staticmethod 
     def populate_tree(node, h5group):
@@ -106,7 +108,8 @@ class TreeModel(QtCore.QAbstractItemModel):
         return 1
 
     def flags(self, index):
-        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | \
+            QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled
         
     def data(self,index,role):
         if not index.isValid():
@@ -131,12 +134,18 @@ class TreeModel(QtCore.QAbstractItemModel):
                 del file[old_name]
                 node.setName(new_name)
                 self.dataChanged.emit(index,index)
-            except:
+            except Exception as e:
+                print(e.message)
                 return False
 
             self.dataChanged.emit(index,index)
             return True
-                
+
+    def mimeTypes(self):
+        return ['arf-items']
+
+    def mimeData(self, indices):
+        mimedata = 
     def index(self, row, column, parent):
         if not parent.isValid():
             return self.createIndex(row,column,self.roots[row])
@@ -152,8 +161,12 @@ class TreeModel(QtCore.QAbstractItemModel):
             
     def parent(self, index):
         node = index.internalPointer()
-        parentNode = node.parent()
-
+        try:
+            parentNode = node.parent()
+        except:
+            print(node)
+            return QtCore.QModelIndex()
+            
         if node in self.roots or parentNode is None:
             return QtCore.QModelIndex()
 
@@ -202,8 +215,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         try:
             self.roots.append(TreeNode(abspath, "File"))
             TreeModel.populate_tree(self.roots[-1],self.files[-1])
-        except Exception as e:
-            raise e
+        except:
             self.files.pop(-1)
             if len(files)<len(roots):
                 self.roots.pop(-1)
@@ -211,7 +223,38 @@ class TreeModel(QtCore.QAbstractItemModel):
         self.endInsertRows()
         return True
 
+    def insertGroup(self, parent):
+        self.beginInsertRows(parent, 0, 0)
+        parentNode = parent.internalPointer()
+        if parentNode.type() == "Dataset":
+            return False
+            
+        parentEntry = self.getEntry(parentNode)
+        name = "%s/new"%parentEntry.name
+        k = 1
+        while name.split('/')[-1] in parentEntry.keys():
+            name = "%s/new_%d"%(parentEntry.name,k)
+            k+=1
 
+        try:
+            tstamp = subprocess.check_output(["date", "+%s"])
+            arf.create_entry(parentEntry, name, tstamp)
+        except Exception as e:
+            print(e.message)
+            return False
+
+        try:
+            new_node = TreeNode(name,'Group')
+            parentNode.addChild(new_node)
+        except Exception as e:
+            print(e.message)
+            del parentEntry[name]
+            return False
+
+        self.endInsertRows()
+        index = self.index(new_node.row(), 0, parent)
+        return index
+        
     def closeFile(self, index):
         self.beginRemoveRows(QtCore.QModelIndex(), index.row(), index.row())
         try:
@@ -225,6 +268,9 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         self.endRemoveRows()
         return True
+
+    def supportedDropActions(self):
+        return QtCore.Qt.CopyAction
         
     def headerData(self,section,orientation,role):
         return "File Tree"
@@ -237,6 +283,9 @@ class ArfTreeView(QtGui.QTreeView):
         self.customContextMenuRequested.connect(self.onCustomConextMenuRequested)
         self.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+        self.setDragDropMode(QtGui.QAbstractItemView.InternalMove)
+        self.setDragEnabled(True)
+        self.setDropIndicatorShown(True)
         
     def delete_selected(self):
         reply = QtGui.QMessageBox.question(self,"","Are you sure you want to delete selected entries?",
@@ -265,6 +314,19 @@ class ArfTreeView(QtGui.QTreeView):
         if len(selected) == 1:
             self.edit(selected[0])
 
+    def create_subgroup(self):
+        selected = self.selectedIndexes()
+        self.clearSelection()
+        if len(selected) == 1:
+            new_index = self.model().insertGroup(selected[0])
+            if new_index:
+                if not self.isExpanded(selected[0]):
+                    self.setExpanded(selected[0], True)
+                self.edit(new_index)
+            else:
+                QtGui.QMessageBox.critical(self,"", "Could create subgroup. Make sure you have write permission for the corresponding file.", QtGui.QMessageBox.Ok)
+                
+
     def onCustomConextMenuRequested(self, pos):
         menu = QtGui.QMenu(self)
         menu.setParent(self)
@@ -276,6 +338,7 @@ class ArfTreeView(QtGui.QTreeView):
         closeAction.triggered.connect(self.close_selected)
         createAction = QtGui.QAction("Create subgroup", menu)
         #createAction.setShortcut(QtGui.QKeySequence("Ctrl+G"))
+        createAction.triggered.connect(self.create_subgroup)
         deleteAction = QtGui.QAction("Delete", menu)
         #deleteAction.setShortcut(QtGui.QKeySequence("Ctrl+D"))
         deleteAction.triggered.connect(self.delete_selected)
@@ -285,7 +348,7 @@ class ArfTreeView(QtGui.QTreeView):
         renameAction.triggered.connect(self.rename_selected)
         if all(node.type() == "File" for node in nodes):
             menu.addAction(closeAction)
-        if all(node.type() in ("File","Group") for node in nodes):
+        if all(node.type() in ("File","Group") for node in nodes) and len(nodes)==1:
             menu.addAction(createAction)
         if all(node.type() in ("Dataset","Group") for node in nodes):
             menu.addAction(deleteAction)
@@ -300,7 +363,7 @@ filenames = ['/home/pmalonis/test2.arf','/home/pmalonis/test.arf']
 # root = TreeNode('/')
 # for key in file.keys():
 #     root.addChild(TreeNode(key))
-#app = QtGui.QApplication(sys.argv)
+# app = QtGui.QApplication(sys.argv)
 model = TreeModel(filenames)
 treeView = ArfTreeView()
 treeView.setModel(model)
