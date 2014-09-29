@@ -141,11 +141,11 @@ class TreeModel(QtCore.QAbstractItemModel):
             self.dataChanged.emit(index,index)
             return True
 
-    def mimeTypes(self):
-        return ['arf-items']
+    # def mimeTypes(self):
+    #     return ['arf-items']
 
-    def mimeData(self, indices):
-        mimedata = 
+    # def mimeData(self, indices):
+    #     mimedata =
     def index(self, row, column, parent):
         if not parent.isValid():
             return self.createIndex(row,column,self.roots[row])
