@@ -22,7 +22,7 @@ from arfview.labelPlot import labelPlot
 from arfview.treeToolBar import treeToolBar
 from arfview.settingsPanel import settingsPanel
 from arfview.rasterPlot import rasterPlot
-from downsamplePlot import downsamplePlot
+from arfview.downsamplePlot import downsamplePlot
 from arfview.spectrogram import spectrogram
 from arfview.plotScrollArea import plotScrollArea
 import arf
@@ -141,8 +141,9 @@ class MainWindow(QtGui.QMainWindow):
         #plot region
         self.plot_scroll_area = plotScrollArea(parent=self)
         self.data_layout = pg.GraphicsLayoutWidget()
-        self.data_layout.setFixedSize(900,600)
+        #self.data_layout.setFixedSize(900,600)
         self.plot_scroll_area.setWidget(self.data_layout)
+        self.plot_scroll_area.setWidgetResizable(True)
         self.subplots=[]
 
         #settings panel
@@ -162,6 +163,7 @@ class MainWindow(QtGui.QMainWindow):
         tree_dock.addWidget(self.tree_toolbar)
         tree_dock.addAction(exitAction)
         data_dock.addWidget(self.plot_scroll_area)
+        #data_dock.addWidget(self.data_layout)
         attr_table_dock.addWidget(self.attr_table)
         settings_dock.addWidget(self.settings_panel)
         self.settings_panel.show()
@@ -173,7 +175,6 @@ class MainWindow(QtGui.QMainWindow):
 
     def toggleplotchecked(self):
         self.plotchecked = not self.plotchecked
-        print('plot checked: ' + str(self.plotchecked))
         if self.plotchecked:
             self.plotcheckedAction.setIcon(QtGui.QIcon.fromTheme('face-cool'))
             self.plotcheckedAction.setStatusTip('click to turn check mode off')
@@ -250,7 +251,6 @@ class MainWindow(QtGui.QMainWindow):
             #self.selectEntry(item.child(0))
             self.tree_view.setCurrentItem(item.child(0))
 
-
     def populateTree(self):
         f = self.current_file
         root = f['/']
@@ -321,10 +321,10 @@ class MainWindow(QtGui.QMainWindow):
             self.subplots = []
         # rasterQPainterPath = QtGui.QPainterPath().addRect(-.1,-5,.2,1)  # TODO make a better raster
         # shape that works
-
+        #import pdb;pdb.set_trace()
         toes = []
         for dataset in dataset_list:
-            print(dataset)
+            #print(dataset)
             if 'datatype' not in dataset.attrs.keys():
                 print('{} is not an arf dataset'.format(repr(dataset)))
                 if os.path.basename(dataset.name) == 'jill_log':
@@ -335,8 +335,9 @@ class MainWindow(QtGui.QMainWindow):
             if dataset.attrs.get('datatype') < 1000: # sampled data
                 if (self.settings_panel.oscillogram_check.checkState()
                     ==QtCore.Qt.Checked):                     
-                    pl = downsamplePlot(dataset, title=dataset.name,
+                    pl = downsamplePlot(dataset,
                                         name=str(len(self.subplots)))
+                    pl.setLabel('left', dataset.name.split('/')[-1])
                     data_layout.addItem(pl,row=len(self.subplots), col=0)
                     max_default_range = 20
                     xmax = min(dataset.size/float(dataset.attrs['sampling_rate']),
@@ -380,7 +381,7 @@ class MainWindow(QtGui.QMainWindow):
                 continue
 
             '''adding spectrograms'''
-            if dataset.attrs.get('datatype') == 1: # show spectrogram
+            if dataset.attrs.get('datatype') in (0,1): # show spectrogram
                 if (self.settings_panel.spectrogram_check.checkState()
                     ==QtCore.Qt.Checked):
                     pl = spectrogram(dataset, self.settings_panel)
@@ -438,10 +439,16 @@ class MainWindow(QtGui.QMainWindow):
 
         '''linking x axes'''
         masterXLink = None
+        minPlotHeight = 100
         for pl in self.subplots:
             if not masterXLink:
                 masterXLink = pl
             pl.setXLink(masterXLink)
+            pl.setMinimumHeight(minPlotHeight)
+
+        self.data_layout.setMinimumHeight(len(self.subplots)*minPlotHeight)
+
+        
 
 
 ## Make all plots clickable
