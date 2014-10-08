@@ -25,10 +25,10 @@ from arfview.rasterPlot import rasterPlot
 from arfview.downsamplePlot import downsamplePlot
 from arfview.spectrogram import spectrogram
 from arfview.plotScrollArea import plotScrollArea
+from exportPlotWindow import exportPlotWindow
 import arf
 import libtfr
 import subprocess
-
 import lbl
 #print(lbl.__version__)
 
@@ -66,10 +66,14 @@ class MainWindow(QtGui.QMainWindow):
         openAction.triggered.connect(self.showDialog)
 
         exportAction = QtGui.QAction(QtGui.QIcon.fromTheme('document-save-as'),
-                                    'Export checked', self)
+                                    'Export checked data', self)
         exportAction.setShortcut('Ctrl+e')
         exportAction.setStatusTip('Export dataset as wav')
         exportAction.triggered.connect(self.export)
+
+        exportPlotAction = QtGui.QAction('Export plot', self)
+        exportPlotAction.setStatusTip('Export plot')
+        exportPlotAction.triggered.connect(self.exportPlot)
 
         plotcheckedAction = QtGui.QAction(QtGui.QIcon.fromTheme('face-smile'),
                                           'Plot checked', self)
@@ -119,6 +123,7 @@ class MainWindow(QtGui.QMainWindow):
         self.toolbar.addAction(openAction)
         self.toolbar.addAction(soundAction)
         self.toolbar.addAction(exportAction)
+        self.toolbar.addAction(exportPlotAction)
         self.toolbar.addAction(plotcheckedAction)
         self.toolbar.addAction(refreshAction)
         self.toolbar.addAction(labelAction)
@@ -188,6 +193,9 @@ class MainWindow(QtGui.QMainWindow):
             self.plotcheckedAction.setIconText('check mode is off')
             self.addPlotAction.setVisible(False)
 
+    def exportPlot(self):
+        exportWin = exportPlotWindow(self.data_layout.centralWidget)
+        exportWin.exec_()
 
     def export(self):
         items = self.tree_view.all_checked_dataset_elements()
