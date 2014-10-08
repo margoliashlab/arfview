@@ -7,7 +7,7 @@ import arf
 import subprocess
 
 class TreeNode:
-    def __init__(self,name, type, parent=None):
+    def __init__(self, name, type, parent=None):
         if type not in ("File","Group","Dataset"):
             raise ValueError("Invalid type argument")
         
@@ -141,11 +141,12 @@ class TreeModel(QtCore.QAbstractItemModel):
             self.dataChanged.emit(index,index)
             return True
 
-    # def mimeTypes(self):
-    #     return ['arf-items']
+    def mimeTypes(self):
+        return ['arf-items']
 
-    # def mimeData(self, indices):
-    #     mimedata =
+    def mimeData(self, indices):
+        mimedata =
+            
     def index(self, row, column, parent):
         if not parent.isValid():
             return self.createIndex(row,column,self.roots[row])
