@@ -28,6 +28,7 @@ from arfview.spectrogram import spectrogram
 from arfview.plotScrollArea import plotScrollArea
 from treemodel import *
 from exportPlotWindow import exportPlotWindow
+import argparse
 import arf
 import libtfr
 import subprocess
@@ -36,8 +37,9 @@ import lbl
 
 class MainWindow(QtGui.QMainWindow):
     '''the main window of the program'''
-    def __init__(self):
+    def __init__(self,file_names):
         super(MainWindow, self).__init__()
+        self.file_names = file_names
         self.current_file = None
         self.open_files = []    # TODO replace current_file with list
         self.plotchecked = False
@@ -131,10 +133,14 @@ class MainWindow(QtGui.QMainWindow):
         self.toolbar.addAction(labelAction)
         self.toolbar.addAction(deleteLabelAction)
         self.toolbar.addAction(addPlotAction)
+        
+        # tree model
+        self.tree_model = TreeModel(self.file_names)
 
-        # file tree
-        self.tree_view = DataTreeView()
-        self.tree_view.currentItemChanged.connect(self.selectEntry)
+        # tree view 
+        self.tree_view = ArfTreeView()
+        self.tree_view.setModel(self.tree_model)
+        self.tree_view.pressed.connect(self.selectEntry)
         if self.current_file:
             self.populateTree()
 
@@ -286,7 +292,9 @@ class MainWindow(QtGui.QMainWindow):
  
 
     def selectEntry(self, treeItem):
-        item = treeItem.getData()
+        selected = self.tree_view.selectedIndexes()
+        for index in selected:
+            
         populateAttrTable(self.attr_table, item)
         if not self.plotchecked:
             self.refresh_data_view()
@@ -531,13 +539,17 @@ def interpolate_spectrogram(spec, res_factor):
     return new_spec
     
 def main():
+    p = argparse.ArgumentParser(prog='arfview')
+    p.add_argument('file_names',nargs='+')
+    options = p.parse_args()
+
     signal.signal(signal.SIGINT, sigint_handler)
     app = QtGui.QApplication(sys.argv)
     app.setApplicationName('arfview')
     timer = QtCore.QTimer()
     timer.start(500)  # You may change this if you wish.
     timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
-    mainWin = MainWindow()
+    mainWin = MainWindow(options.file_names)
     sys.exit(app.exec_())
     #if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
     #    QtGui.QApplication.instance().exec_()

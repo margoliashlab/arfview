@@ -18,6 +18,7 @@ class TreeNode:
         self._children = []
         self._parent = parent
         self._type = type
+        self._checked = False
         
         if parent is not None:
             parent.addChild(self)
@@ -55,11 +56,17 @@ class TreeNode:
         self.parent().sortChildren()
         self._name = new_name
         
+    def isChecked(self):
+        return self._checked
+
     def child(self, row):
         return self._children[row]
 
     def childCount(self):
         return len(self._children)
+    
+    def children(self):
+        return self._children
 
     def copyWithChildren(self):
         '''Copies self and children and returns copy'''
@@ -76,6 +83,9 @@ class TreeNode:
             return self._parent._children.index(self)
         else:
             return 0
+
+    def toggleCheckState(self):
+        self._checked = not self._checked
 
     def type(self):
         return self._type
@@ -110,6 +120,23 @@ class TreeModel(QtCore.QAbstractItemModel):
         else:
             return file[node.name()]
 
+    @staticmethod
+    def getAllDescendentDatasetNodes(root):
+        datasetNodes = []
+        for child in root.children():
+            if child.type() == 'Dataset':
+                datasetNodes.append(child)
+            else:
+                datasetNodes.extend(TreeModel.getAllDescendentDatasetNodes(child))
+        return datasetNodes
+
+    def getAllCheckedDatasets(self):
+        return [self.getEntry(node) for root in self.roots for node in 
+                TreeModel.getAllDescendentDatasetNodes(root) 
+                if node.isChecked()]
+            
+              
+
     @staticmethod 
     def populate_tree(node, h5group):
         if isinstance(h5group,h5py.File): 
@@ -142,9 +169,9 @@ class TreeModel(QtCore.QAbstractItemModel):
         if index.isValid():
             type = index.internalPointer().type()
             if type == 'Dataset':
-                flags = flags | QtCore.Qt.ItemIsDragEnabled 
+                flags = flags | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsUserCheckable 
             elif type == 'Group':
-                flags = flags | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled
+                flags = flags | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled | QtCore.Qt.ItemIsUserCheckable
             elif type == 'File':
                 flags = flags | QtCore.Qt.ItemIsDropEnabled
 
@@ -156,8 +183,13 @@ class TreeModel(QtCore.QAbstractItemModel):
         node = index.internalPointer()
         if role in (QtCore.Qt.DisplayRole, QtCore.Qt.EditRole):
             return node.name().split('/')[-1]
-            
-    def setData(self, index, value, role = QtCore.Qt.EditRole):
+        if role == QtCore.Qt.CheckStateRole and node.type() == 'Dataset':
+            if node.isChecked():
+                return QtCore.Qt.Checked
+            else:
+                return QtCore.Qt.Unchecked
+
+    def setData(self, index, value, role):
         if role == QtCore.Qt.EditRole:
             if '/' in value:
                 QtGui.QMessageBox.critical(self,"", "Entry name cannot contain '/' character.", QMessageBox.Ok)
@@ -177,6 +209,11 @@ class TreeModel(QtCore.QAbstractItemModel):
                 print(e.message)
                 return False
 
+            self.dataChanged.emit(index,index)
+            return True
+        elif role == QtCore.Qt.CheckStateRole:
+            node = index.internalPointer()
+            node.toggleCheckState()
             self.dataChanged.emit(index,index)
             return True
 
@@ -204,24 +241,26 @@ class TreeModel(QtCore.QAbstractItemModel):
         return True
 
 
-    def copyNodes(self, nodes, row, parentIndex):
-        
+    def copyNodes(self, nodes, row, parentIndex):     
         self.beginInsertRows(parentIndex, 1, 1+len(nodes)-1)
         parentNode = parentIndex.internalPointer()
         parentEntry = self.getEntry(parentNode)
         success = True
         for node in nodes:
-            print [child.name() for child in node._children]
             entry = self.getEntry(node)
-            parentNode.addChild(node.copyWithChildren())
+            copy_name = entry.name.split('/')[-1]
+            number = ''
+            k=1
+            while (copy_name + number) in parentEntry.keys():
+                print copy_name + number
+                number = '(%d)'%k
+                k += 1
+
+            copy_name += number
+            node.setName(copy_name)
+            parentNode.addChild(node.copyWithChildren())           
             try:
-                copy_name = entry.name.split('/')[-1] in parentEntry.keys()
-                number = ''
-                k=1
-                while copy_name in parentEntry.keys():
-                    number = '(%d)'
-                copy_name += number
-                parentEntry.copy(entry,'/'.join([parentEntry.name, copy_name])
+                parentEntry.copy(entry,'/'.join([parentEntry.name, copy_name]))
             except Exception as e:
                 print e.message
                 parentNode.removeChild(node.row())
@@ -441,6 +480,7 @@ class ArfTreeView(QtGui.QTreeView):
             
         menu.exec_(self.mapToGlobal(pos))
 
+       
     
         
 filenames = ['/home3/pmalonis/test2.arf','/home3/pmalonis/test.arf']
