@@ -5,6 +5,9 @@ import sys
 import os
 import arf
 import subprocess
+import cPickle 
+from copy import deepcopy
+
 
 class TreeNode:
     def __init__(self, name, type, parent=None):
@@ -21,19 +24,35 @@ class TreeNode:
             
     def addChild(self, child):
         self._children.append(child)
-        self._children.sort(key=lambda x: x.name())
+        self.sortChildren()
         child._parent = self
+    
+    def sortChildren(self):
+        self._children.sort(key=lambda x: x.name())
+    
+    # def isDescendent(self, node):
+    #     '''Returns True if node is descendent of self. Otherwise returns False'''
+    #     if self.type() == 'Dataset':
+    #         return False
+    #     ancestor = node
+    #     while ancestor != None:
+    #         if ancestor in self._children:
+    #             return True
+    #         ancestor = ancestor.parent()
+
+    #     return False
 
     def removeChild(self, position):
         child = self._children.pop(position)
         child._parent = None
         for i in xrange(len(child._children)):
-            grandkid.removeChild(i)
+            child.child(i).removeChild(i)
         
     def name(self):
         return self._name
 
     def setName(self, new_name):
+        self.parent().sortChildren()
         self._name = new_name
         
     def child(self, row):
@@ -41,6 +60,13 @@ class TreeNode:
 
     def childCount(self):
         return len(self._children)
+
+    def copyWithChildren(self):
+        '''Copies self and children and returns copy'''
+        copy = deepcopy(self)
+        copy._parent = None
+
+        return copy
 
     def parent(self):
         return self._parent
@@ -72,14 +98,18 @@ class TreeModel(QtCore.QAbstractItemModel):
             child = parent            
             parent = child.parent()
 
-        file_idx = self.roots.index(child)
+        file_idx = (i for i,root in enumerate(self.roots) 
+                    if root.name()==child.name()).next()
         return self.files[file_idx]
         
     def getEntry(self, node):
         """Gets arf entry from node"""
         file = self.getFile(node)
-        return file[node.name()]
-            
+        if node.type() == 'File':
+            return file
+        else:
+            return file[node.name()]
+
     @staticmethod 
     def populate_tree(node, h5group):
         if isinstance(h5group,h5py.File): 
@@ -107,9 +137,18 @@ class TreeModel(QtCore.QAbstractItemModel):
     def columnCount(self,parent):
         return 1
 
-    def flags(self, index):
-        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | \
-            QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled
+    def flags(self, index):        
+        flags = QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        if index.isValid():
+            type = index.internalPointer().type()
+            if type == 'Dataset':
+                flags = flags | QtCore.Qt.ItemIsDragEnabled 
+            elif type == 'Group':
+                flags = flags | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled
+            elif type == 'File':
+                flags = flags | QtCore.Qt.ItemIsDropEnabled
+
+        return flags
         
     def data(self,index,role):
         if not index.isValid():
@@ -145,7 +184,51 @@ class TreeModel(QtCore.QAbstractItemModel):
         return ['arf-items']
 
     def mimeData(self, indices):
-        mimedata =
+        mimedata = QtCore.QMimeData()
+        nodes = [idx.internalPointer() for idx in indices]
+        data = cPickle.dumps(nodes)
+        mimedata.setData('arf-items', data)
+        return mimedata
+
+    def dropMimeData(self, mimedata, action, row, column, parentIndex):
+        if not mimedata.hasFormat('arf-items'):
+           return False
+        nodes = cPickle.loads(str(mimedata.data('arf-items')))
+                
+        success = self.copyNodes(nodes, row, parentIndex)
+        
+        # if not success:
+        #     QtGui.QMessageBox.critical(self,"", "Could create subgroup. Make sure you have write permission for the corresponding file.", QtGui.QMessageBox.Ok)
+        #     return False
+        # else:
+        return True
+
+
+    def copyNodes(self, nodes, row, parentIndex):
+        
+        self.beginInsertRows(parentIndex, 1, 1+len(nodes)-1)
+        parentNode = parentIndex.internalPointer()
+        parentEntry = self.getEntry(parentNode)
+        success = True
+        for node in nodes:
+            print [child.name() for child in node._children]
+            entry = self.getEntry(node)
+            parentNode.addChild(node.copyWithChildren())
+            try:
+                copy_name = entry.name.split('/')[-1] in parentEntry.keys()
+                number = ''
+                k=1
+                while copy_name in parentEntry.keys():
+                    number = '(%d)'
+                copy_name += number
+                parentEntry.copy(entry,'/'.join([parentEntry.name, copy_name])
+            except Exception as e:
+                print e.message
+                parentNode.removeChild(node.row())
+                success = False
+
+        self.endInsertRows()
+        return False
             
     def index(self, row, column, parent):
         if not parent.isValid():
@@ -234,21 +317,19 @@ class TreeModel(QtCore.QAbstractItemModel):
         name = "%s/new"%parentEntry.name
         k = 1
         while name.split('/')[-1] in parentEntry.keys():
-            name = "%s/new_%d"%(parentEntry.name,k)
+            name = "%s/new(%d)"%(parentEntry.name,k)
             k+=1
 
         try:
             tstamp = subprocess.check_output(["date", "+%s"])
             arf.create_entry(parentEntry, name, tstamp)
         except Exception as e:
-            print(e.message)
             return False
 
         try:
             new_node = TreeNode(name,'Group')
             parentNode.addChild(new_node)
         except Exception as e:
-            print(e.message)
             del parentEntry[name]
             return False
 
@@ -270,8 +351,11 @@ class TreeModel(QtCore.QAbstractItemModel):
         self.endRemoveRows()
         return True
 
+    def supportedDragActions(self):
+        return QtCore.Qt.CopyAction | QtCore.Qt.MoveAction
+
     def supportedDropActions(self):
-        return QtCore.Qt.CopyAction
+        return QtCore.Qt.CopyAction | QtCore.Qt.MoveAction
         
     def headerData(self,section,orientation,role):
         return "File Tree"
@@ -284,14 +368,13 @@ class ArfTreeView(QtGui.QTreeView):
         self.customContextMenuRequested.connect(self.onCustomConextMenuRequested)
         self.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-        self.setDragDropMode(QtGui.QAbstractItemView.InternalMove)
         self.setDragEnabled(True)
+        self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
+        self.setDragDropMode(QtGui.QAbstractItemView.InternalMove)
         
     def delete_selected(self):
-        reply = QtGui.QMessageBox.question(self,"","Are you sure you want to delete selected entries?",
-                                         QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
-                                         QtGui.QMessageBox.No)
+        reply = QtGui.QMessageBox.question(self,"","Are you sure you want to delete selected entries?", QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, QtGui.QMessageBox.No)
         if reply == QtGui.QMessageBox.Yes:
             selected = self.selectedIndexes()
             self.clearSelection()
@@ -356,11 +439,11 @@ class ArfTreeView(QtGui.QTreeView):
             if len(nodes) == 1:
                 menu.addAction(renameAction)
             
-        menu.exec_(pos)
+        menu.exec_(self.mapToGlobal(pos))
 
     
         
-filenames = ['/home/pmalonis/test2.arf','/home/pmalonis/test.arf']
+filenames = ['/home3/pmalonis/test2.arf','/home3/pmalonis/test.arf']
 # root = TreeNode('/')
 # for key in file.keys():
 #     root.addChild(TreeNode(key))
