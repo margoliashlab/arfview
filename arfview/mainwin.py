@@ -19,13 +19,14 @@ import arfview.utils as utils
 QtCore.qInstallMsgHandler(lambda *args: None) # suppresses PySide 1.2.1 bug
 from scipy.interpolate import interp2d
 import scipy.signal
-from arfview.labelPlot import labelPlot
+from labelPlot import labelPlot
 from arfview.treeToolBar import treeToolBar
 from arfview.settingsPanel import settingsPanel
 from arfview.rasterPlot import rasterPlot
 from arfview.downsamplePlot import downsamplePlot
 from arfview.spectrogram import spectrogram
 from arfview.plotScrollArea import plotScrollArea
+from treemodel import *
 from exportPlotWindow import exportPlotWindow
 import arf
 import libtfr
@@ -91,7 +92,7 @@ class MainWindow(QtGui.QMainWindow):
 
         labelAction = QtGui.QAction(QtGui.QIcon.fromTheme('insert-object'),
                                       'Add Labels', self)
-        labelAction.setVisible(False)
+        #labelAction.setVisible(False)
         labelAction.setShortcut('Ctrl+l')
         labelAction.setStatusTip('Add label entry to current group')
         labelAction.triggered.connect(self.add_label)
@@ -289,11 +290,11 @@ class MainWindow(QtGui.QMainWindow):
         populateAttrTable(self.attr_table, item)
         if not self.plotchecked:
             self.refresh_data_view()
-        if (isinstance(item, h5py.Dataset) or isinstance(item, h5py.Group)
-            and item.name != '/'):
-            self.labelAction.setVisible(True)
-        else:
-            self.labelAction.setVisible(False)
+        # if (isinstance(item, h5py.Dataset) or isinstance(item, h5py.Group)
+        #     and item.name != '/'):
+        #     self.labelAction.setVisible(True)
+        # else:
+        #     self.labelAction.setVisible(False)
 
     def add_label(self):
         item = self.tree_view.currentItem()
@@ -474,8 +475,6 @@ def clicked(plot, points):
         p.setPen('b', width=2)
         print(dir(p))
     lastClicked = points
-
-
 
 
 def export(dataset, export_format='wav', savepath=None):
