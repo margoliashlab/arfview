@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division, \
     print_function
 from PySide import QtGui, QtCore
+from PySide.QtGui import QApplication, QCursor
 import signal
 import sys
 import pyqtgraph as pg
@@ -324,6 +325,7 @@ class MainWindow(QtGui.QMainWindow):
         
     def plot_dataset_list(self, dataset_list, data_layout, append=False):
         ''' plots a list of datasets to a data layout'''
+        QApplication.setOverrideCursor(QCursor(QtCore.Qt.WaitCursor))
         data_layout.clear()
         if not append:
             self.subplots = []
@@ -455,7 +457,7 @@ class MainWindow(QtGui.QMainWindow):
             pl.setMinimumHeight(minPlotHeight)
 
         self.data_layout.setMinimumHeight(len(self.subplots)*minPlotHeight)
-
+        QApplication.restoreOverrideCursor()
         
 
 

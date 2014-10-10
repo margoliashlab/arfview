@@ -2,6 +2,9 @@ import pyqtgraph as pg
 import numpy as np
 
 class downsamplePlot(pg.PlotItem):
+    '''pyqtgraph.PlotItem that reads only a limited number of points at a time from
+    memory.  The points plotted and any downsampling applied is based on the view range.'''
+
     def __init__(self, dataset, *args, **kwargs):
         super(downsamplePlot, self).__init__(*args, **kwargs)
         self.dataset = dataset
@@ -18,6 +21,7 @@ class downsamplePlot(pg.PlotItem):
         #              maxYRange=maxYRange)
         
     def downsample(self):
+        """Sets the plotted data based on the view range"""
         sr = float(self.dataset.attrs['sampling_rate'])
         t_min,t_max = self.getViewBox().viewRange()[0]
         t_min = max(0, t_min)
@@ -25,16 +29,16 @@ class downsamplePlot(pg.PlotItem):
         i_min = int(t_min*sr)
         i_max = int(t_max*sr)
         npoints = i_max-i_min
-        max_points=50000.0
-        step=int(np.ceil(npoints/max_points))
-        t = np.linspace(t_min, t_max, np.ceil(npoints/float(step)))
         if npoints>0:
-                if len(self.dataset.shape) == 1:
-                        self.data_item.setData(t, self.dataset[i_min:i_max:step])
-                elif self.dataset.shape[0] >= self.dataset.shape[1]:
-                        self.data_item.setData(t, self.dataset[i_min:i_max:step,0])
-                else:
-                        self.data_item.setData(t, self.dataset[0,i_min:i_max])
+            max_points=50000.0
+            step=int(np.ceil(npoints/max_points))
+            t = np.linspace(t_min, t_max, np.ceil(npoints/float(step)))
+            if len(self.dataset.shape) == 1:
+                self.data_item.setData(t, self.dataset[i_min:i_max:step])
+            elif self.dataset.shape[0] >= self.dataset.shape[1]:
+                self.data_item.setData(t, self.dataset[i_min:i_max:step,0])
+            else:
+                self.data_item.setData(t, self.dataset[0,i_min:i_max])
         else:
-                self.data_item.clear()
-
+            self.data_item.clear()
+            
