@@ -5,6 +5,9 @@ import libtfr
 import h5py
 
 class spectrogram(pg.PlotItem):
+    """pyqtgraph.PlotItem that plots a spectrogram of the data in an arf dataset based on the
+    settings in the settings panel"""
+    
     def __init__(self, dataset, settings_panel, *args, **kwargs):
         super(spectrogram, self).__init__(*args, **kwargs)
         self.dataset = dataset

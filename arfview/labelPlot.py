@@ -37,9 +37,6 @@ class labelRegion(pg.LinearRegionItem):
             
 class labelPlot(pg.PlotItem):
     '''Interactive plot for making and displaying labels
-
-    Parameters:
-    lbl - complex label dataset
     '''
     sigLabelSelected = Signal()
     sigNoLabelSelected = Signal()
@@ -189,6 +186,9 @@ class labelPlot(pg.PlotItem):
         return new_idx
                            
     def keyPressEvent(self, event):
+        """Records alphabetical key as a potential label in self.key.
+        Labels the interval representing the entire current view if space bar is pressed
+        at the same time as a key"""
         if event.text().isalpha():
             event.accept()
             self.key = event.text().lower()
@@ -197,10 +197,13 @@ class labelPlot(pg.PlotItem):
                 name = self.key
                 start, stop = self.getViewBox().viewRange()[0]
                 self.add_label(name,start,stop)
+        elif event.key() == Qt.Key_Backspace:
+            self.delete_selected_labels()
         else:
             event.ignore()
 
     def keyReleaseEvent(self, event):
+        """Clears self.key if the key released is the key stored in self.key"""
         if event.text().lower() == self.key:
             event.accept()
             self.key = None
@@ -208,6 +211,7 @@ class labelPlot(pg.PlotItem):
             event.ignore()
             
     def mouseClickEvent(self, event):
+        """Creates a new label if alphabetical key is pressed"""
         if event.button() == Qt.LeftButton:
             pos=self.getViewBox().mapSceneToView(event.scenePos())
             t = pos.x() * self.scaling_factor
@@ -229,6 +233,7 @@ class labelPlot(pg.PlotItem):
                 self.activeLabel = None
 
     def mouseDoubleClickEvent(self, event):
+        """Used to select a label for potential deletion.  Changes the color of selected label"""
         if self.activeLabel: return
         previously_clicked = list(self.double_clicked)
         pos = event.scenePos()

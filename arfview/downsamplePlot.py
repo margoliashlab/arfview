@@ -1,6 +1,7 @@
 import pyqtgraph as pg
 import numpy as np
 
+
 class downsamplePlot(pg.PlotItem):
     '''pyqtgraph.PlotItem that reads only a limited number of points at a time from
     memory.  The points plotted and any downsampling applied is based on the view range.'''
@@ -8,11 +9,17 @@ class downsamplePlot(pg.PlotItem):
     def __init__(self, dataset, *args, **kwargs):
         super(downsamplePlot, self).__init__(*args, **kwargs)
         self.dataset = dataset
-        self.data_item = pg.PlotDataItem()
+        self.data_item = pg.PlotDataItem()   
+        self.addItem(self.data_item)       
+        sr = float(self.dataset.attrs['sampling_rate'])
+        max_initial_xrange = 10
+        x_max = min(self.dataset.len()/sr, max_initial_xrange)
+        self.setXRange(0, x_max ,padding=0)
         self.downsample()
-        self.addItem(self.data_item)
+        yrange = self.dataItems[0].dataBounds(1)
+        self.setYRange(*yrange, padding = 0)
         vb = self.getViewBox()
-        vb.sigXRangeChanged.connect(self.downsample)
+        vb.sigXRangeChanged.connect(self.downsample)      
         #setting maximum view range (can only be used in version 9.9 of pyqtgraph)
         # max = np.max(dataset)
         # min = np.min(dataset)

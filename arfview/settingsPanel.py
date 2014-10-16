@@ -60,7 +60,7 @@ class settingsPanel(QtGui.QWidget):
         
 
     def create_spectrogram_box(self):
-        self.spectrogram_check.setCheckState(QtCore.Qt.CheckState.Checked)
+        #self.spectrogram_check.setCheckState(QtCore.Qt.CheckState.Checked)
         self.win_size = QtGui.QLineEdit(str(self.defaults['win_size']))
         self.step = QtGui.QLineEdit(str(self.defaults['step']))
         self.window = QtGui.QComboBox()        

@@ -4,9 +4,10 @@ from arfview import datatree
 import numpy as np
 
 class treeToolBar(QtGui.QToolBar):
-    def __init__(self, tree_view): 
+    """Toolbar at the bottom of the treeview"""
+    def __init__(self, tree_model): 
         super(treeToolBar, self).__init__()
-        self.tree_view = tree_view
+        self.tree_model = tree_model
         self.check_multiple_win = None
         self.initUI()
 
@@ -23,11 +24,13 @@ class treeToolBar(QtGui.QToolBar):
         self.check_multiple_win.show()
 
     def uncheck_all(self):
-        dsets = self.tree_view.all_dataset_elements()
-        for d in dsets:
-             d.setCheckState(0, QtCore.Qt.CheckState.Unchecked)
+        indexes = self.tree_model.allIndexes()
+        for idx in indexes:
+             self.tree_model.setData(idx,QtCore.Qt.Unchecked,
+                                     role=QtCore.Qt.CheckStateRole)
         
 class _checkMultipleWindow(QtGui.QDialog):
+    """Pop-up window that appears when the check multiple button is pressed. Allows for limitted queryingz"""
     def __init__(self, treeToolBar):
         super(_checkMultipleWindow, self).__init__()
         self.tree_view = treeToolBar.tree_view
@@ -68,7 +71,11 @@ class _checkMultipleWindow(QtGui.QDialog):
         self.close()
             
 class attributeMenu(QtGui.QComboBox):
-    def __init__(self, tree_view, value_menu):
+    """Combo box for selecting attributes to use as a criterion for checking datasets.
+    When an attribute is selected, all of the values of this attribute that appear in the open
+    files are shown in the value_menu combo box"""
+    
+    def __init__(self, model, value_menu):
         super(attributeMenu, self).__init__()
         self.tree_view = tree_view
         self.value_menu = value_menu
@@ -93,7 +100,7 @@ class attributeMenu(QtGui.QComboBox):
         self.attribute = text
         self.value_menu.clear()
         self.value_menu.addItem('')
-        dsets = self.tree_view.all_dataset_elements()
+        indexes = self.tree_view.all_dataset_elements()
         values = []
         for d in dsets:
             dataset = d.getData()

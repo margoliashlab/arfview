@@ -1,6 +1,5 @@
 """an alpha version of the plotter"""
 
-
 from __future__ import absolute_import, division, \
     print_function
 from PySide import QtGui, QtCore
@@ -20,10 +19,10 @@ QtCore.qInstallMsgHandler(lambda *args: None) # suppresses PySide 1.2.1 bug
 from scipy.interpolate import interp2d
 import scipy.signal
 from labelPlot import labelPlot
-from arfview.treeToolBar import treeToolBar
+from treeToolBar import treeToolBar
 from arfview.settingsPanel import settingsPanel
 from arfview.rasterPlot import rasterPlot
-from arfview.downsamplePlot import downsamplePlot
+from downsamplePlot import downsamplePlot
 from arfview.spectrogram import spectrogram
 from arfview.plotScrollArea import plotScrollArea
 from treemodel import *
@@ -33,6 +32,7 @@ import arf
 import libtfr
 import subprocess
 import lbl
+import time
 #print(lbl.__version__)
 
 class MainWindow(QtGui.QMainWindow):
@@ -44,6 +44,13 @@ class MainWindow(QtGui.QMainWindow):
         self.open_files = []    # TODO replace current_file with list
         self.plotchecked = False
         self.initUI()
+        
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        for file in self.tree_model.files:
+            file.close()
 
     def initUI(self):
         """"Assembles the basic Gui layout, status bar, menubar
@@ -145,7 +152,7 @@ class MainWindow(QtGui.QMainWindow):
             self.populateTree()
 
         # tree_toolbar
-        self.tree_toolbar = treeToolBar(self.tree_view)
+        self.tree_toolbar = treeToolBar(self.tree_model)
         
         #attribute table
         self.attr_table = QtGui.QTableWidget(10, 2)
@@ -211,7 +218,6 @@ class MainWindow(QtGui.QMainWindow):
         savedir, filename = os.path.split(items[0].file.filename)
         savepath =  os.path.join(savedir,os.path.splitext(filename)[0]
                                  + '_' + items[0].name.replace('/','_'))
-        print(savepath)
         fname, fileextension = QtGui.QFileDialog.\
                                getSaveFileName(self, 'Save data as',
                                                savepath,
@@ -239,7 +245,6 @@ class MainWindow(QtGui.QMainWindow):
         fname, fileextension = QtGui.QFileDialog.\
                                getOpenFileName(self, 'Open file', '.', extensions)
         if not fname: return
-        print(fileextension)
         ext = os.path.splitext(fname)[-1]
         if ext not in ('.arf','.hdf5','.h5','.mat'):
             if ext in ('.lbl', '.wav'):
@@ -256,32 +261,30 @@ class MainWindow(QtGui.QMainWindow):
 
             fname = temp_h5f.file.filename
             
-        print("%s opened" % (fname))
-        self.statusBar().showMessage("%s opened" % (fname))
-        self.current_file = h5py.File(str(fname))
-        self.populateTree()
+        self.tree_model.insertFile(fname)
         
-        # selects first entry if first file opened
-        item=self.tree_view.topLevelItem(0)
-        if item.getData().file.filename == fname:
-            #self.selectEntry(item.child(0))
-            self.tree_view.setCurrentItem(item.child(0))
-
     def populateTree(self):
         f = self.current_file
         root = f['/']
         self.tree_view.recursivePopulateTree(root)
 
+    def plot_checked_datasets(self):
+        checked_datasets = self.tree_model.getCheckedDatasets()
+        self.plot_dataset_list(checked_datasets, self.data_layout)
+
     def refresh_data_view(self):
-        checked_datasets = self.tree_view.all_checked_dataset_elements()
-        if len(checked_datasets) > 0 and self.plotchecked:
-            self.plot_dataset_list(checked_datasets, self.data_layout)
+        if self.plotchecked:
+            self.plot_checked_datasets()
         else:
-            item = self.tree_view.currentItem().getData()
-            if type(item) == h5py.Dataset:
-                datasets = [item]
-            else:
-                datasets = [x for x in item.values() if type(x) == h5py.Dataset]
+            datasets = []
+            entries = [self.tree_model.getEntry(idx.internalPointer()) for idx 
+                       in self.tree_view.selectedIndexes()]
+            for entry in entries:
+                if type(entry) == h5py.Dataset:
+                    datasets.append(entry)
+                else:
+                    datasets.extend([x for x in entry.itervalues() if type(x) == h5py.Dataset])
+
             self.plot_dataset_list(datasets, self.data_layout)
 
     def add_plot(self):
@@ -292,12 +295,10 @@ class MainWindow(QtGui.QMainWindow):
  
 
     def selectEntry(self, treeItem):
-        selected = self.tree_view.selectedIndexes()
-        for index in selected:
-            
-        populateAttrTable(self.attr_table, item)
         if not self.plotchecked:
             self.refresh_data_view()
+            
+        #populateAttrTable(self.attr_table, item)
         # if (isinstance(item, h5py.Dataset) or isinstance(item, h5py.Group)
         #     and item.name != '/'):
         #     self.labelAction.setVisible(True)
@@ -334,38 +335,37 @@ class MainWindow(QtGui.QMainWindow):
         
     def plot_dataset_list(self, dataset_list, data_layout, append=False):
         ''' plots a list of datasets to a data layout'''
-        QApplication.setOverrideCursor(QCursor(QtCore.Qt.WaitCursor))
+        QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         data_layout.clear()
         if not append:
             self.subplots = []
-        # rasterQPainterPath = QtGui.QPainterPath().addRect(-.1,-5,.2,1)  # TODO make a better raster
-        # shape that works
-        #import pdb;pdb.set_trace()
         toes = []
+        t = time.time()
+        unplotable = []
         for dataset in dataset_list:
-            #print(dataset)
+            
             if 'datatype' not in dataset.attrs.keys():
-                print('{} is not an arf dataset'.format(repr(dataset)))
-                if os.path.basename(dataset.name) == 'jill_log':
-                    print(dataset.value)
+                unplotable.append(''.join([dataset.file.filename, dataset.name]))
                 continue
 
             '''sampled data'''
             if dataset.attrs.get('datatype') < 1000: # sampled data
                 if (self.settings_panel.oscillogram_check.checkState()
-                    ==QtCore.Qt.Checked):                     
+                    ==QtCore.Qt.Checked):  
+                    
                     pl = downsamplePlot(dataset,
                                         name=str(len(self.subplots)))
                     pl.setLabel('left', dataset.name.split('/')[-1])
                     data_layout.addItem(pl,row=len(self.subplots), col=0)
-                    max_default_range = 20
-                    xmax = min(dataset.size/float(dataset.attrs['sampling_rate']),
-                               max_default_range)
-                    pl.setXRange(0, xmax,padding=0)
-                    pl.setYRange(np.min(dataset), np.max(dataset),padding=0)                    
+                    # max_default_range = 20
+                    # xmax = min(dataset.size/float(dataset.attrs['sampling_rate']),
+                    #            max_default_range)
+                    # xrange = pl.dataItems[0].dataBounds(0)
+                    # yrange = pl.dataItems[0].dataBounds(1)
+                    # pl.setXRange(*xrange,padding=0)
+                    # pl.setYRange(*yrange,padding=0)                    
                     self.subplots.append(pl)
                     pl.showGrid(x=True, y=True)
-
                 ''' simple events '''
             elif utils.is_simple_event(dataset):
                 if dataset.attrs.get('units') == 'ms':
@@ -393,10 +393,7 @@ class MainWindow(QtGui.QMainWindow):
                     self.subplots.append(pl)
 
             else:
-                print('I don\'t know how to plot {} of type {} \
-                with datatype {}'.format(dataset,
-                                         type(dataset),
-                                         dataset.attrs['datatype']))
+                unplotable.append(''.join([dataset.file.filename, dataset.name]))
                 continue
 
             '''adding spectrograms'''
@@ -405,10 +402,9 @@ class MainWindow(QtGui.QMainWindow):
                     ==QtCore.Qt.Checked):
                     pl = spectrogram(dataset, self.settings_panel)
                     data_layout.addItem(pl, row=len(self.subplots), col=0)
-                    print (pl)
                     self.subplots.append(pl)
-
-                    
+       
+ #end for loop
         if toes:
             if self.settings_panel.raster_check.checkState()==QtCore.Qt.Checked:
                 pl= rasterPlot(toes)
@@ -435,7 +431,7 @@ class MainWindow(QtGui.QMainWindow):
                 pl.addItem(psth)
                 pl.setMouseEnabled(y=False)
                 self.subplots.append(pl)
-                
+              
         if self.settings_panel.isi_check.checkState()==QtCore.Qt.Checked:
             isis = np.zeros(sum(len(t)-1 for t in toes))
             k=0
@@ -456,6 +452,7 @@ class MainWindow(QtGui.QMainWindow):
             pl.setMouseEnabled(y=False)
             self.subplots.append(pl)
 
+        
         '''linking x axes'''
         masterXLink = None
         minPlotHeight = 100
@@ -467,21 +464,19 @@ class MainWindow(QtGui.QMainWindow):
 
         self.data_layout.setMinimumHeight(len(self.subplots)*minPlotHeight)
         QApplication.restoreOverrideCursor()
-        
+        if unplotable:
+            QtGui.QMessageBox.warning(self,"", "Could not plot the following datasets: %s" %('\n'.join(unplotable)), QtGui.QMessageBox.Ok)
 
 
 ## Make all plots clickable
 lastClicked = []
 
-
 def clicked(plot, points):
     global lastClicked
     for p in lastClicked:
         p.resetPen()
-    print("clicked points", points)
     for p in points:
         p.setPen('b', width=2)
-        print(dir(p))
     lastClicked = points
 
 
@@ -496,7 +491,6 @@ def export(dataset, export_format='wav', savepath=None):
 
 
 def playSound(data, mainWin):
-    print('writing wav file')
     tfile = tempfile.mktemp() + '_' + data.name.replace('/', '_') + '.wav'
     normed_data = np.int16(data/np.max(np.abs(data.value)) * 32767)
     wavfile.write(tfile, data.attrs['sampling_rate'],
@@ -521,7 +515,6 @@ def populateAttrTable(table, item):
         table.setItem(row, 0, attribute)
         table.setItem(row, 1, attribute_value)
 
-
 def sigint_handler(*args):
     """Handler for the SIGINT signal."""
     sys.stderr.write('\r')
@@ -540,17 +533,17 @@ def interpolate_spectrogram(spec, res_factor):
     
 def main():
     p = argparse.ArgumentParser(prog='arfview')
-    p.add_argument('file_names',nargs='+')
+    p.add_argument('file_names',default=None,nargs='+')
     options = p.parse_args()
-
     signal.signal(signal.SIGINT, sigint_handler)
     app = QtGui.QApplication(sys.argv)
     app.setApplicationName('arfview')
     timer = QtCore.QTimer()
     timer.start(500)  # You may change this if you wish.
     timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
-    mainWin = MainWindow(options.file_names)
-    sys.exit(app.exec_())
+    with MainWindow(options.file_names) as mainWin:
+        sys.exit(app.exec_())
+
     #if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
     #    QtGui.QApplication.instance().exec_()
 

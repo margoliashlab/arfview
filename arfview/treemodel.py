@@ -18,7 +18,7 @@ class TreeNode:
         self._children = []
         self._parent = parent
         self._type = type
-        self._checked = False
+        self._checked = QtCore.Qt.Unchecked
         
         if parent is not None:
             parent.addChild(self)
@@ -56,7 +56,7 @@ class TreeNode:
         self.parent().sortChildren()
         self._name = new_name
         
-    def isChecked(self):
+    def checkState(self):
         return self._checked
 
     def child(self, row):
@@ -84,21 +84,20 @@ class TreeNode:
         else:
             return 0
 
-    def toggleCheckState(self):
-        self._checked = not self._checked
+    def setCheckState(self, value):
+        self._checked = value
 
     def type(self):
         return self._type
 
 class TreeModel(QtCore.QAbstractItemModel):
-    def __init__(self, filenames, parent=None):
+    cannotOpenFile = QtCore.Signal(str)
+    def __init__(self, filenames=[], parent=None):
         super(TreeModel, self).__init__(parent)
         self.files = []
         self.roots = []
-        #self.context_menu = QtGui.QMenu
         for f in filenames:
-            success = self.insertFile(f)
-            print success
+            self.insertFile(f)
 
     def getFile(self, node):
         '''Gets file object associated with node'''
@@ -121,21 +120,36 @@ class TreeModel(QtCore.QAbstractItemModel):
             return file[node.name()]
 
     @staticmethod
-    def getAllDescendentDatasetNodes(root):
+    def getDescendantDatasetNodes(root):
         datasetNodes = []
         for child in root.children():
             if child.type() == 'Dataset':
                 datasetNodes.append(child)
             else:
-                datasetNodes.extend(TreeModel.getAllDescendentDatasetNodes(child))
+                datasetNodes.extend(TreeModel.getDescendantDatasetNodes(child))
         return datasetNodes
 
-    def getAllCheckedDatasets(self):
+    def getCheckedDatasets(self):
         return [self.getEntry(node) for root in self.roots for node in 
-                TreeModel.getAllDescendentDatasetNodes(root) 
-                if node.isChecked()]
+                TreeModel.getDescendantDatasetNodes(root) 
+                if node.checkState() == QtCore.Qt.Checked]
             
-              
+    def getDescendantIndexes(self, index):
+        indexes = []
+        for row in xrange(self.rowCount(index)):
+            idx = self.index(row, column=0, parent=index)
+            indexes.append(idx)
+            indexes.extend(self.getDescendantIndexes(idx))
+
+        return indexes
+
+    def allIndexes(self):
+        indexes = []
+        for row in xrange(self.rowCount(QtCore.QModelIndex())):
+            idx = self.index(row,0,QtCore.QModelIndex())
+            indexes.extend(self.getDescendantIndexes(idx))
+            
+        return indexes
 
     @staticmethod 
     def populate_tree(node, h5group):
@@ -184,17 +198,13 @@ class TreeModel(QtCore.QAbstractItemModel):
         if role in (QtCore.Qt.DisplayRole, QtCore.Qt.EditRole):
             return node.name().split('/')[-1]
         if role == QtCore.Qt.CheckStateRole and node.type() == 'Dataset':
-            if node.isChecked():
-                return QtCore.Qt.Checked
-            else:
-                return QtCore.Qt.Unchecked
-
+            return node.checkState()
+ 
     def setData(self, index, value, role):
         if role == QtCore.Qt.EditRole:
             if '/' in value:
                 QtGui.QMessageBox.critical(self,"", "Entry name cannot contain '/' character.", QMessageBox.Ok)
                 return False
-
             node = index.internalPointer()
             old_name = node.name()
             parent_name = '/'.join(old_name.split('/')[:-1])
@@ -213,7 +223,7 @@ class TreeModel(QtCore.QAbstractItemModel):
             return True
         elif role == QtCore.Qt.CheckStateRole:
             node = index.internalPointer()
-            node.toggleCheckState()
+            node.setCheckState(value)
             self.dataChanged.emit(index,index)
             return True
 
@@ -239,7 +249,6 @@ class TreeModel(QtCore.QAbstractItemModel):
         #     return False
         # else:
         return True
-
 
     def copyNodes(self, nodes, row, parentIndex):     
         self.beginInsertRows(parentIndex, 1, 1+len(nodes)-1)
@@ -328,10 +337,10 @@ class TreeModel(QtCore.QAbstractItemModel):
 
     def insertFile(self, filename, mode=None):
         self.beginInsertRows(QtCore.QModelIndex(),len(self.files)-1,len(self.files)-1)
-
         try:
             self.files.append(h5py.File(filename,mode))
         except:
+            self.cannotOpenFile.emit(filename)
             return False
 
         abspath = os.path.abspath(filename)
@@ -375,7 +384,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         self.endInsertRows()
         index = self.index(new_node.row(), 0, parent)
         return index
-        
+
     def closeFile(self, index):
         self.beginRemoveRows(QtCore.QModelIndex(), index.row(), index.row())
         try:
@@ -399,7 +408,6 @@ class TreeModel(QtCore.QAbstractItemModel):
     def headerData(self,section,orientation,role):
         return "File Tree"
         
-
 class ArfTreeView(QtGui.QTreeView):
     def __init__(self, *args, **kwargs):
         super(ArfTreeView, self).__init__(*args, **kwargs)
@@ -411,6 +419,13 @@ class ArfTreeView(QtGui.QTreeView):
         self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
         self.setDragDropMode(QtGui.QAbstractItemView.InternalMove)
+
+    def setModel(self, *args, **kwargs):
+        super(ArfTreeView,self).setModel(*args, **kwargs)
+        self.model().cannotOpenFile.connect(self.cantOpenMessage)
+        
+    def cantOpenMessage(self, filename):
+        QtGui.QMessageBox.critical(self,"", "Cannot open file %s."%(filename), QtGui.QMessageBox.Ok)
         
     def delete_selected(self):
         reply = QtGui.QMessageBox.question(self,"","Are you sure you want to delete selected entries?", QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, QtGui.QMessageBox.No)
@@ -447,7 +462,7 @@ class ArfTreeView(QtGui.QTreeView):
                     self.setExpanded(selected[0], True)
                 self.edit(new_index)
             else:
-                QtGui.QMessageBox.critical(self,"", "Could create subgroup. Make sure you have write permission for the corresponding file.", QtGui.QMessageBox.Ok)
+                QtGui.QMessageBox.critical(self,"", "Could create subgroup. Make sure you have write permission for the corresponding file.", QtGui.QMessageBox.Ok) 
                 
 
     def onCustomConextMenuRequested(self, pos):
@@ -488,8 +503,8 @@ filenames = ['/home3/pmalonis/test2.arf','/home3/pmalonis/test.arf']
 # for key in file.keys():
 #     root.addChild(TreeNode(key))
 # app = QtGui.QApplication(sys.argv)
-model = TreeModel(filenames)
-treeView = ArfTreeView()
-treeView.setModel(model)
-treeView.show()
+# del = TreeModel(filenames)
+# treeView = ArfTreeView()
+# treeView.setModel(model)
+# treeView.show()
 #sys.exit(app.exec_())
