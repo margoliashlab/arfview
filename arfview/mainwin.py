@@ -103,7 +103,7 @@ class MainWindow(QtGui.QMainWindow):
 
         labelAction = QtGui.QAction(QtGui.QIcon.fromTheme('insert-object'),
                                       'Add Labels', self)
-        #labelAction.setVisible(False)
+        labelAction.setVisible(False)
         labelAction.setShortcut('Ctrl+l')
         labelAction.setStatusTip('Add label entry to current group')
         labelAction.triggered.connect(self.add_label)
@@ -197,7 +197,6 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowTitle('arfview')
         self.resize(1300, 700)
         self.show()
-        import IPython; IPython.embed()
 
     def toggleplotchecked(self):
         self.plotchecked = not self.plotchecked
@@ -301,9 +300,13 @@ class MainWindow(QtGui.QMainWindow):
             self.refresh_data_view()
         indexes = self.tree_view.selectedIndexes() 
         if len(indexes) == 1:
+            self.labelAction.setVisible(True)
+
             node = indexes[0].internalPointer()
             entry = self.tree_model.getEntry(node)
             self.populateAttrTable(entry)
+        else:
+            self.labelAction.setVisible(False)
 
     def populateAttrTable(self, item):
         """Populate QTableWidget with attribute values of hdf5 item ITEM"""
@@ -317,25 +320,18 @@ class MainWindow(QtGui.QMainWindow):
             self.attr_table.setItem(row, 1, attribute_value)
 
     def add_label(self):
-        item = self.tree_view.currentItem()
-        if isinstance(item.getData(), h5py.Group):
-            lbl_parent = item
-        elif isinstance(item.getData(), h5py.Dataset):
-            lbl_parent = item.parent()
-        lbl_rec = np.zeros((0,),dtype=[('name', 'a8'), ('start',float), ('stop', float)])
-        dset_name = 'lbl'
-        #naming new label dataset if 'lbl' is already in group
-        idx = 1
-        while dset_name in lbl_parent.getData().keys():
-            dset_name = 'lbl_%d' %(idx)
-            idx += 1
-            
-        dset = lbl_parent.getData().create_dataset(dset_name,
-                                                   data=lbl_rec,
-                                                   maxshape=(None,))
-        dset.attrs.create('units','s')
-        dset.attrs.create('datatype',2002)
-        self.tree_view.add(dset, parent_node=lbl_parent)
+        indexes = self.tree_view.selectedIndexes()
+        if len(indexes) == 1:
+            node = indexes[0].internalPointer()
+            entry = self.tree_model.getEntry(node)
+        if isinstance(entry, h5py.Group):
+            lbl_parent = entry
+            parentIndex = indexes[0]
+        elif isinstance(entry, h5py.Dataset):
+            lbl_parent = entry.parent
+            parentIndex = indexes[0].parent()
+        
+        self.tree_model.insertLabel(parentIndex)
         self.refresh_data_view()
 
     def label_selected(self):

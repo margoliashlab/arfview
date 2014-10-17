@@ -37,6 +37,7 @@ def replace_dataset(dataset, parent, **kwargs):
     parent[name] = parent[temp_name]
     del parent[temp_name]
     
+    return parent[name]
 
     
 

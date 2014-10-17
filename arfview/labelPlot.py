@@ -4,7 +4,7 @@ import sys
 import pyqtgraph as pg
 import numpy as np
 from utils import replace_dataset
-import utils as utils
+import arfview.utils as utils
 import h5py
 import arf
 import pyqtgraph.functions as fn
@@ -167,21 +167,24 @@ class labelPlot(pg.PlotItem):
         if self.lbl.maxshape != (None,): #if dataset is extensible
             win = self.parentWidget().getViewWidget()        
             reply = QMessageBox.question(win,"", "Label cannot be added because dataset is not extensible. Replace with extensible dataset?", QMessageBox.No | QMessageBox.Yes, QMessageBox.No)
+            self.key = None  #because keyReleaseEvent may be ignored during message box display                
             if reply == QMessageBox.Yes:
                 lbl = self.file[self.path] 
-                replace_dataset(lbl, lbl.parent, data=lbl[:], maxshape=(None,))
-            self.key = None  #because keyReleaseEvent may be ignored during message box display                
-                
+                self.lbl = replace_dataset(lbl, lbl.parent, data=lbl[:], maxshape=(None,))
+            else:
+                return 
+
         elif self.file.mode == 'r':
             win = self.parentWidget().getViewWidget()
             QMessageBox.critical(win,"", "Cannot add label. Make sure you have write permission for this file.", QMessageBox.Ok)
             self.key = None
-        else:
-            arf.append_data(self.lbl,(name,start,stop))
-            self.double_clicked = np.append(self.double_clicked,False)
-            sort_idx = self.sort_lbl()
-            new_idx = np.argmax(sort_idx==(len(self.lbl)-1))
-            self.plot_all_events()
+            return 
+
+        arf.append_data(self.lbl,(name,start,stop))
+        self.double_clicked = np.append(self.double_clicked,False)
+        sort_idx = self.sort_lbl()
+        new_idx = np.argmax(sort_idx==(len(self.lbl)-1))
+        self.plot_all_events()
 
         return new_idx
                            

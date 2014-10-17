@@ -9,6 +9,7 @@ import cPickle
 from copy import deepcopy
 from datetime import datetime
 from dateutil import tz
+import numpy as np
 
 named_types = {0 : 'UNDEFINED', 1 : 'ACOUSTIC', 2 : 'EXTRAC_HP', 3 : 'EXTRAC_LF',
                4 : 'EXTRAC_EEG', 5 : 'INTRAC_CC', 6 : 'INTRAC_VC',
@@ -100,6 +101,7 @@ class TreeNode:
 
     def datatype(self):
         return self._datatype
+
     def parent(self):
         return self._parent
         
@@ -345,7 +347,6 @@ class TreeModel(QtCore.QAbstractItemModel):
         if node in self.roots or parentNode is None:
             return QtCore.QModelIndex()
 
-
         self.createIndex(parentNode.row(),0,parentNode.name())
 
         return self.createIndex(parentNode.row(), 0, parentNode)
@@ -402,6 +403,40 @@ class TreeModel(QtCore.QAbstractItemModel):
             return False
         self.endInsertRows()
         return True
+
+    def insertLabel(self, parentIndex):
+        self.beginInsertRows(parentIndex, 0, 0)
+        parentNode = parentIndex.internalPointer()
+        if parentNode.type() == "Dataset":
+            return False
+            
+        parentEntry = self.getEntry(parentNode)
+        name = "%s/lbl"%parentEntry.name
+        k = 1
+        while name.split('/')[-1] in parentEntry.keys():
+            name = "%s/lbl(%d)"%(parentEntry.name,k)
+            k+=1
+
+        lbl_rec = np.zeros((0,),dtype=[('name', 'a8'), ('start',float), ('stop', float)])            
+        tstamp = subprocess.check_output(["date", "+%s"])
+        dset=parentEntry.create_dataset(name,data=lbl_rec,maxshape=(None,))
+        dset.attrs['datatype'] = 2002
+        dset.attrs['units'] = 's'
+        # except Exception as e:
+        #     return False
+
+        try:
+            new_node = TreeNode(name,type='Dataset',
+                                datatype='COMPONENTL')
+            parentNode.addChild(new_node)
+        except Exception as e:
+            del parentEntry[name]
+            return False
+
+        self.endInsertRows()
+        index = self.index(new_node.row(), 0, parentIndex)
+        return index
+
 
     def insertGroup(self, parent):
         self.beginInsertRows(parent, 0, 0)
