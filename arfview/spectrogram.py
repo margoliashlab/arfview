@@ -79,4 +79,3 @@ class spectrogram(pg.PlotItem):
         self.setXRange(0, dataset.size / dataset.attrs['sampling_rate'])
         self.setYRange(freq_min/plot_scale, freq_max/plot_scale)
         self.setMouseEnabled(x=True, y=False)
-

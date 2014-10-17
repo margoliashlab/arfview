@@ -24,7 +24,7 @@ class treeToolBar(QtGui.QToolBar):
         self.check_multiple_win.show()
 
     def uncheck_all(self):
-        indexes = self.tree_model.allIndexes()
+        indexes = self.tree_model.allDatasetIndexes()
         for idx in indexes:
              self.tree_model.setData(idx,QtCore.Qt.Unchecked,
                                      role=QtCore.Qt.CheckStateRole)
@@ -33,14 +33,14 @@ class _checkMultipleWindow(QtGui.QDialog):
     """Pop-up window that appears when the check multiple button is pressed. Allows for limitted queryingz"""
     def __init__(self, treeToolBar):
         super(_checkMultipleWindow, self).__init__()
-        self.tree_view = treeToolBar.tree_view
+        self.tree_model = treeToolBar.tree_model
         self.initUI()
         
     def initUI(self):
         self.attribute_label = QtGui.QLabel("Check entries with attribute")
         self.value_label = QtGui.QLabel("equal to")
         self.value_menu = QtGui.QComboBox()
-        self.attribute_menu = attributeMenu(self.tree_view, self.value_menu)
+        self.attribute_menu = attributeMenu(self.tree_model, self.value_menu)
         
         self.ok_button=QtGui.QPushButton("OK")
         self.ok_button.pressed.connect(self.button_pressed)
@@ -60,13 +60,14 @@ class _checkMultipleWindow(QtGui.QDialog):
     def button_pressed(self):
         key = self.attribute_menu.attribute
         value = self.attribute_menu.attribute_value
-        dsets = self.tree_view.all_dataset_elements()
-        for d in dsets:
-            dataset = d.getData()
+        indexes = self.tree_model.allDatasetIndexes()
+        for idx in indexes:
+            dataset = self.tree_model.getEntry(idx.internalPointer())
             attribute_objects = [dataset.attrs, dataset.parent.attrs]
             for attrs in attribute_objects:
                 if key in attrs.keys() and attrs[key] == value:
-                    d.setCheckState(0, QtCore.Qt.CheckState.Checked)
+                    self.tree_model.setData(idx, value=QtCore.Qt.CheckState.Checked,
+                                            role=QtCore.Qt.CheckStateRole)
 
         self.close()
             
@@ -75,19 +76,19 @@ class attributeMenu(QtGui.QComboBox):
     When an attribute is selected, all of the values of this attribute that appear in the open
     files are shown in the value_menu combo box"""
     
-    def __init__(self, model, value_menu):
+    def __init__(self, tree_model, value_menu):
         super(attributeMenu, self).__init__()
-        self.tree_view = tree_view
+        self.tree_model = tree_model
         self.value_menu = value_menu
         self.attribute = None
         self.attribute_value = None
         
         # adding all attribute keys in tree
         self.addItem('')
-        dsets = self.tree_view.all_dataset_elements()
+        indexes = self.tree_model.allDatasetIndexes()
         attributes = []
-        for d in dsets:
-            dataset = d.getData()
+        for idx in indexes:
+            dataset = self.tree_model.getEntry(idx.internalPointer())
             for a in dataset.attrs.keys() + dataset.parent.attrs.keys():
                  if a not in attributes:
                     attributes.append(a)
@@ -100,10 +101,10 @@ class attributeMenu(QtGui.QComboBox):
         self.attribute = text
         self.value_menu.clear()
         self.value_menu.addItem('')
-        indexes = self.tree_view.all_dataset_elements()
         values = []
-        for d in dsets:
-            dataset = d.getData()
+        indexes = self.tree_model.allDatasetIndexes()
+        for idx in indexes:
+            dataset = self.tree_model.getEntry(idx.internalPointer())
             attribute_objects= [dataset.attrs, dataset.parent.attrs]
             for attrs in attribute_objects:
                 if self.attribute not in attrs.keys(): continue

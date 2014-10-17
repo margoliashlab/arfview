@@ -18,15 +18,15 @@ import arfview.utils as utils
 QtCore.qInstallMsgHandler(lambda *args: None) # suppresses PySide 1.2.1 bug
 from scipy.interpolate import interp2d
 import scipy.signal
-from labelPlot import labelPlot
-from treeToolBar import treeToolBar
+from arfview.labelPlot import labelPlot
+from arfview.treeToolBar import treeToolBar
 from arfview.settingsPanel import settingsPanel
 from arfview.rasterPlot import rasterPlot
-from downsamplePlot import downsamplePlot
+from arfview.downsamplePlot import downsamplePlot
 from arfview.spectrogram import spectrogram
 from arfview.plotScrollArea import plotScrollArea
-from treemodel import *
-from exportPlotWindow import exportPlotWindow
+from arfview.treemodel import *
+from arfview.exportPlotWindow import exportPlotWindow
 import argparse
 import arf
 import libtfr
@@ -37,6 +37,8 @@ import time
 
 class MainWindow(QtGui.QMainWindow):
     '''the main window of the program'''
+
+
     def __init__(self,file_names):
         super(MainWindow, self).__init__()
         self.file_names = file_names
@@ -77,17 +79,17 @@ class MainWindow(QtGui.QMainWindow):
         openAction.triggered.connect(self.showDialog)
 
         exportAction = QtGui.QAction(QtGui.QIcon.fromTheme('document-save-as'),
-                                    'Export checked data', self)
+                                    'Export Checked Data', self)
         exportAction.setShortcut('Ctrl+e')
         exportAction.setStatusTip('Export dataset as wav')
         exportAction.triggered.connect(self.export)
 
-        exportPlotAction = QtGui.QAction('Export plot', self)
-        exportPlotAction.setStatusTip('Export plot')
+        exportPlotAction = QtGui.QAction('Export Plot', self)
+        exportPlotAction.setStatusTip('Export Plot')
         exportPlotAction.triggered.connect(self.exportPlot)
 
         plotcheckedAction = QtGui.QAction(QtGui.QIcon.fromTheme('face-smile'),
-                                          'Plot checked', self)
+                                          'Plot Checked', self)
         plotcheckedAction.setShortcut('Ctrl+k')
         plotcheckedAction.setStatusTip('plot checked')
         plotcheckedAction.triggered.connect(self.toggleplotchecked)
@@ -161,7 +163,6 @@ class MainWindow(QtGui.QMainWindow):
         #plot region
         self.plot_scroll_area = plotScrollArea(parent=self)
         self.data_layout = pg.GraphicsLayoutWidget()
-        #self.data_layout.setFixedSize(900,600)
         self.plot_scroll_area.setWidget(self.data_layout)
         self.plot_scroll_area.setWidgetResizable(True)
         self.subplots=[]
@@ -171,7 +172,7 @@ class MainWindow(QtGui.QMainWindow):
 
         # final steps
         self.area = pgd.DockArea()
-        tree_dock = pgd.Dock("Tree", size=(200, 100))
+        tree_dock = pgd.Dock("Tree", size=(250, 100))
         data_dock = pgd.Dock("Data", size=(500, 200))
         attr_table_dock = pgd.Dock("Attributes", size=(200, 50))
         settings_dock = pgd.Dock('Settings', size=(150,1))
@@ -180,6 +181,10 @@ class MainWindow(QtGui.QMainWindow):
         self.area.addDock(attr_table_dock, 'bottom', tree_dock)
         self.area.addDock(settings_dock, 'bottom', attr_table_dock)
         tree_dock.addWidget(self.tree_view)
+        header = self.tree_view.header()
+        header.resizeSection(0,150)
+        header.resizeSection(1,100)
+        header.resizeSection(2,150)
         tree_dock.addWidget(self.tree_toolbar)
         tree_dock.addAction(exitAction)
         data_dock.addWidget(self.plot_scroll_area)
@@ -192,20 +197,21 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowTitle('arfview')
         self.resize(1300, 700)
         self.show()
+        import IPython; IPython.embed()
 
     def toggleplotchecked(self):
         self.plotchecked = not self.plotchecked
         if self.plotchecked:
             self.plotcheckedAction.setIcon(QtGui.QIcon.fromTheme('face-cool'))
             self.plotcheckedAction.setStatusTip('click to turn check mode off')
-            self.plotcheckedAction.setText('check mode is on')
-            self.plotcheckedAction.setIconText('check mode is on')
+            self.plotcheckedAction.setText('Check Mode Is On')
+            self.plotcheckedAction.setIconText('Check Mode Is On')
             self.addPlotAction.setVisible(True)
         else:
             self.plotcheckedAction.setIcon(QtGui.QIcon.fromTheme('face-smile'))
-            self.plotcheckedAction.setStatusTip('click to turn check mode on')
-            self.plotcheckedAction.setText('check mode is off')
-            self.plotcheckedAction.setIconText('check mode is off')
+            self.plotcheckedAction.setStatusTip('Click to turn check mode on')
+            self.plotcheckedAction.setText('Check Mode Is Off')
+            self.plotcheckedAction.setIconText('Check Mode Is Off')
             self.addPlotAction.setVisible(False)
 
     def exportPlot(self):
@@ -230,8 +236,10 @@ class MainWindow(QtGui.QMainWindow):
                 export(item, fileextension.split(' ')[0], fname)
                 
     def playSound(self):
-        item = self.tree_view.currentItem().getData()
-        playSound(item, self)
+        indexes = self.tree_view.selectedIndexes()
+        if len(indexes) == 1:
+            dataset = self.tree_model.getEntry(indexes[0].internalPointer())
+        playSound(dataset, self)
 
     def showDialog(self):
         extensions = '*.arf *.hdf5 *.h5 *.mat *.wav *.lbl'
@@ -260,13 +268,7 @@ class MainWindow(QtGui.QMainWindow):
                 temp_h5f = createtemparf(fname, datatype=sampled_types[datatype_name])
 
             fname = temp_h5f.file.filename
-            
         self.tree_model.insertFile(fname)
-        
-    def populateTree(self):
-        f = self.current_file
-        root = f['/']
-        self.tree_view.recursivePopulateTree(root)
 
     def plot_checked_datasets(self):
         checked_datasets = self.tree_model.getCheckedDatasets()
@@ -297,13 +299,22 @@ class MainWindow(QtGui.QMainWindow):
     def selectEntry(self, treeItem):
         if not self.plotchecked:
             self.refresh_data_view()
-            
-        #populateAttrTable(self.attr_table, item)
-        # if (isinstance(item, h5py.Dataset) or isinstance(item, h5py.Group)
-        #     and item.name != '/'):
-        #     self.labelAction.setVisible(True)
-        # else:
-        #     self.labelAction.setVisible(False)
+        indexes = self.tree_view.selectedIndexes() 
+        if len(indexes) == 1:
+            node = indexes[0].internalPointer()
+            entry = self.tree_model.getEntry(node)
+            self.populateAttrTable(entry)
+
+    def populateAttrTable(self, item):
+        """Populate QTableWidget with attribute values of hdf5 item ITEM"""
+        self.attr_table.setRowCount(len(item.attrs.keys()))
+        for row, (key, value) in enumerate(item.attrs.iteritems()):
+            attribute = QtGui.QTableWidgetItem(str(key))
+            attribute_value = QtGui.QTableWidgetItem(str(value))
+            attribute.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+            attribute_value.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+            self.attr_table.setItem(row, 0, attribute)
+            self.attr_table.setItem(row, 1, attribute_value)
 
     def add_label(self):
         item = self.tree_view.currentItem()
@@ -343,7 +354,6 @@ class MainWindow(QtGui.QMainWindow):
         t = time.time()
         unplotable = []
         for dataset in dataset_list:
-            
             if 'datatype' not in dataset.attrs.keys():
                 unplotable.append(''.join([dataset.file.filename, dataset.name]))
                 continue
@@ -454,19 +464,20 @@ class MainWindow(QtGui.QMainWindow):
 
         
         '''linking x axes'''
-        masterXLink = None
         minPlotHeight = 100
+        masterXLink = None
         for pl in self.subplots:
             if not masterXLink:
                 masterXLink = pl
             pl.setXLink(masterXLink)
             pl.setMinimumHeight(minPlotHeight)
 
-        self.data_layout.setMinimumHeight(len(self.subplots)*minPlotHeight)
+        spacing = 5
+        self.data_layout.centralWidget.layout.setSpacing(spacing)
+        self.data_layout.setMinimumHeight(len(self.subplots)*(minPlotHeight+spacing))
         QApplication.restoreOverrideCursor()
         if unplotable:
             QtGui.QMessageBox.warning(self,"", "Could not plot the following datasets: %s" %('\n'.join(unplotable)), QtGui.QMessageBox.Ok)
-
 
 ## Make all plots clickable
 lastClicked = []
@@ -503,17 +514,7 @@ def playSound(data, mainWin):
         if os.path.exists(play_path):
             subprocess.Popen([play_path, tfile])
             break
-            
-def populateAttrTable(table, item):
-    """Populate QTableWidget with attribute values of hdf5 item ITEM"""
-    table.setRowCount(len(item.attrs.keys()))
-
-
-    for row, (key, value) in enumerate(item.attrs.iteritems()):
-        attribute = QtGui.QTableWidgetItem(str(key))
-        attribute_value = QtGui.QTableWidgetItem(str(value))
-        table.setItem(row, 0, attribute)
-        table.setItem(row, 1, attribute_value)
+        
 
 def sigint_handler(*args):
     """Handler for the SIGINT signal."""
@@ -533,7 +534,7 @@ def interpolate_spectrogram(spec, res_factor):
     
 def main():
     p = argparse.ArgumentParser(prog='arfview')
-    p.add_argument('file_names',default=None,nargs='+')
+    p.add_argument('file_names', nargs='*',default=[])
     options = p.parse_args()
     signal.signal(signal.SIGINT, sigint_handler)
     app = QtGui.QApplication(sys.argv)

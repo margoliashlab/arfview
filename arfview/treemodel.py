@@ -7,19 +7,41 @@ import arf
 import subprocess
 import cPickle 
 from copy import deepcopy
+from datetime import datetime
+from dateutil import tz
 
+named_types = {0 : 'UNDEFINED', 1 : 'ACOUSTIC', 2 : 'EXTRAC_HP', 3 : 'EXTRAC_LF',
+               4 : 'EXTRAC_EEG', 5 : 'INTRAC_CC', 6 : 'INTRAC_VC',
+               23 : 'EXTRAC_RAW',
+               1000 : 'EVENT',
+               1001 : 'SPIKET',
+               1002 : 'BEHAVET',
+               2000 : 'INTERVAL',
+               2001 : 'STIMI',
+               2002 : 'COMPONENTL'}
+def get_str_time(entry):
+    if 'timestamp' not in entry.attrs.keys():
+        return('')
+    time = datetime.fromtimestamp(entry.attrs['timestamp'][0] + entry.attrs['timestamp'][1] * 1e-6,
+                                  tz.tzutc()).astimezone(tz.tzlocal())
+    return time.strftime('%Y-%m-%d, %H:%M:%S')
 
 class TreeNode:
-    def __init__(self, name, type, parent=None):
+    def __init__(self, name, type, datatype=None, parent=None):
         if type not in ("File","Group","Dataset"):
             raise ValueError("Invalid type argument")
-        
+
         self._name = name
         self._children = []
         self._parent = parent
         self._type = type
-        self._checked = QtCore.Qt.Unchecked
-        
+        self._checked = False #needs to be bool because you can't pickle checkstate objects 
+
+        if type in ('File','Group'):
+            self._datatype = self._type
+        elif type == 'Dataset':
+            self._datatype = datatype
+
         if parent is not None:
             parent.addChild(self)
             
@@ -53,10 +75,11 @@ class TreeNode:
         return self._name
 
     def setName(self, new_name):
-        self.parent().sortChildren()
+        if self._parent is not None:
+            self._parent.sortChildren()
         self._name = new_name
         
-    def checkState(self):
+    def isChecked(self):
         return self._checked
 
     def child(self, row):
@@ -75,6 +98,8 @@ class TreeNode:
 
         return copy
 
+    def datatype(self):
+        return self._datatype
     def parent(self):
         return self._parent
         
@@ -132,7 +157,7 @@ class TreeModel(QtCore.QAbstractItemModel):
     def getCheckedDatasets(self):
         return [self.getEntry(node) for root in self.roots for node in 
                 TreeModel.getDescendantDatasetNodes(root) 
-                if node.checkState() == QtCore.Qt.Checked]
+                if node.isChecked()]
             
     def getDescendantIndexes(self, index):
         indexes = []
@@ -143,11 +168,13 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         return indexes
 
-    def allIndexes(self):
+    def allDatasetIndexes(self):
         indexes = []
         for row in xrange(self.rowCount(QtCore.QModelIndex())):
             idx = self.index(row,0,QtCore.QModelIndex())
-            indexes.extend(self.getDescendantIndexes(idx))
+            datasetIndexes = [index for index in self.getDescendantIndexes(idx) 
+                              if index.internalPointer().type()=='Dataset']
+            indexes.extend(datasetIndexes)
             
         return indexes
 
@@ -165,7 +192,8 @@ class TreeModel(QtCore.QAbstractItemModel):
                     node.addChild(new_node)
                     TreeModel.populate_tree(new_node, h5obj)
                 else:
-                    new_node = TreeNode(h5obj.name, "Dataset")
+                    new_node = TreeNode(h5obj.name, "Dataset", 
+                                        named_types.get(h5obj.attrs.get('datatype')))
                     node.addChild(new_node)
                     
     def rowCount(self, parent):
@@ -176,10 +204,10 @@ class TreeModel(QtCore.QAbstractItemModel):
             return node.childCount()
 
     def columnCount(self,parent):
-        return 1
+        return 3
 
     def flags(self, index):        
-        flags = QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        flags = QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled
         if index.isValid():
             type = index.internalPointer().type()
             if type == 'Dataset':
@@ -189,6 +217,9 @@ class TreeModel(QtCore.QAbstractItemModel):
             elif type == 'File':
                 flags = flags | QtCore.Qt.ItemIsDropEnabled
 
+            if index.column() == 0:
+                flags = flags | QtCore.Qt.ItemIsSelectable
+
         return flags
         
     def data(self,index,role):
@@ -196,9 +227,19 @@ class TreeModel(QtCore.QAbstractItemModel):
             return None
         node = index.internalPointer()
         if role in (QtCore.Qt.DisplayRole, QtCore.Qt.EditRole):
-            return node.name().split('/')[-1]
-        if role == QtCore.Qt.CheckStateRole and node.type() == 'Dataset':
-            return node.checkState()
+            if index.column() == 0:
+                return node.name().split('/')[-1]
+            elif index.column() == 1:
+                return node.datatype()
+            elif index.column() == 2 and node.type() == "Group":
+                return get_str_time(self.getEntry(node))
+
+        if (role == QtCore.Qt.CheckStateRole and index.column()==0 
+            and node.type() == 'Dataset'):
+            if node.isChecked():
+                return QtCore.Qt.Checked
+            else:
+                return QtCore.Qt.Unchecked
  
     def setData(self, index, value, role):
         if role == QtCore.Qt.EditRole:
@@ -216,14 +257,17 @@ class TreeModel(QtCore.QAbstractItemModel):
                 node.setName(new_name)
                 self.dataChanged.emit(index,index)
             except Exception as e:
-                print(e.message)
                 return False
 
             self.dataChanged.emit(index,index)
             return True
+
         elif role == QtCore.Qt.CheckStateRole:
             node = index.internalPointer()
-            node.setCheckState(value)
+            if value == QtCore.Qt.Checked:
+                node.setCheckState(True)
+            else:
+                node.setCheckState(False)
             self.dataChanged.emit(index,index)
             return True
 
@@ -232,7 +276,7 @@ class TreeModel(QtCore.QAbstractItemModel):
 
     def mimeData(self, indices):
         mimedata = QtCore.QMimeData()
-        nodes = [idx.internalPointer() for idx in indices]
+        nodes = [idx.internalPointer() for idx in indices if idx.column()==0]
         data = cPickle.dumps(nodes)
         mimedata.setData('arf-items', data)
         return mimedata
@@ -241,7 +285,6 @@ class TreeModel(QtCore.QAbstractItemModel):
         if not mimedata.hasFormat('arf-items'):
            return False
         nodes = cPickle.loads(str(mimedata.data('arf-items')))
-                
         success = self.copyNodes(nodes, row, parentIndex)
         
         # if not success:
@@ -256,22 +299,24 @@ class TreeModel(QtCore.QAbstractItemModel):
         parentEntry = self.getEntry(parentNode)
         success = True
         for node in nodes:
+            print(node.name())
             entry = self.getEntry(node)
             copy_name = entry.name.split('/')[-1]
             number = ''
             k=1
             while (copy_name + number) in parentEntry.keys():
-                print copy_name + number
                 number = '(%d)'%k
                 k += 1
 
             copy_name += number
-            node.setName(copy_name)
-            parentNode.addChild(node.copyWithChildren())           
+            copy_name = '/'.join([parentEntry.name, copy_name])
+            copy = node.copyWithChildren()
+            copy.setName(copy_name)
+            parentNode.addChild(copy)  
             try:
-                parentEntry.copy(entry,'/'.join([parentEntry.name, copy_name]))
+                parentEntry.copy(entry, copy_name)
             except Exception as e:
-                print e.message
+                print(e.message)
                 parentNode.removeChild(node.row())
                 success = False
 
@@ -285,7 +330,6 @@ class TreeModel(QtCore.QAbstractItemModel):
             parentNode = parent.internalPointer() 
 
         childItem = parentNode.child(row)
-
         if childItem:
             return self.createIndex(row, column, childItem)
         else:
@@ -296,17 +340,14 @@ class TreeModel(QtCore.QAbstractItemModel):
         try:
             parentNode = node.parent()
         except:
-            print(node)
             return QtCore.QModelIndex()
             
         if node in self.roots or parentNode is None:
             return QtCore.QModelIndex()
 
-        try:
-            self.createIndex(parentNode.row(),0,parentNode.name())
-        except Exception as e:
-            print(e)
-             
+
+        self.createIndex(parentNode.row(),0,parentNode.name())
+
         return self.createIndex(parentNode.row(), 0, parentNode)
 
     # def insertRows(self, position, rows, parent=QtCore.QModelIndex()):
@@ -322,6 +363,10 @@ class TreeModel(QtCore.QAbstractItemModel):
 
     def deleteEntry(self, index):
         self.beginRemoveRows(index.parent(), index.row(), index.row())
+#        self.beginResetModel()
+        #import pdb;pdb.set_trace()
+        if not index.isValid():
+            return False
         node = index.internalPointer()
         if node.type() == "File":
             return False
@@ -330,9 +375,11 @@ class TreeModel(QtCore.QAbstractItemModel):
             del file[node.name()]
             node.parent().removeChild(node.row())
         except:
+            import pdb;pdb.set_trace()
             return False
             
         self.endRemoveRows()
+#        self.endResetModel()
         return True
 
     def insertFile(self, filename, mode=None):
@@ -347,9 +394,10 @@ class TreeModel(QtCore.QAbstractItemModel):
         try:
             self.roots.append(TreeNode(abspath, "File"))
             TreeModel.populate_tree(self.roots[-1],self.files[-1])
-        except:
+        except Exception as e:
+            print(e.message)
             self.files.pop(-1)
-            if len(files)<len(roots):
+            if len(self.files)<len(self.roots):
                 self.roots.pop(-1)
             return False
         self.endInsertRows()
@@ -406,7 +454,14 @@ class TreeModel(QtCore.QAbstractItemModel):
         return QtCore.Qt.CopyAction | QtCore.Qt.MoveAction
         
     def headerData(self,section,orientation,role):
-        return "File Tree"
+        if role == QtCore.Qt.DisplayRole:
+            if section == 0:
+                return "Name"
+            elif section == 1:
+                return "Type"
+            elif section == 2:
+                return "Date"
+
         
 class ArfTreeView(QtGui.QTreeView):
     def __init__(self, *args, **kwargs):
@@ -418,7 +473,7 @@ class ArfTreeView(QtGui.QTreeView):
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
-        self.setDragDropMode(QtGui.QAbstractItemView.InternalMove)
+        self.setDragDropMode(QtGui.QAbstractItemView.DragDrop)
 
     def setModel(self, *args, **kwargs):
         super(ArfTreeView,self).setModel(*args, **kwargs)
@@ -431,16 +486,16 @@ class ArfTreeView(QtGui.QTreeView):
         reply = QtGui.QMessageBox.question(self,"","Are you sure you want to delete selected entries?", QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, QtGui.QMessageBox.No)
         if reply == QtGui.QMessageBox.Yes:
             selected = self.selectedIndexes()
+            persistent = [QtCore.QPersistentModelIndex(idx) for idx in selected]
             self.clearSelection()
             fail_message = False
-            for index in selected:
+            for index in persistent:
                 success = self.model().deleteEntry(index)
                 if not success and not fail_message:
                     fail_message = True
             if fail_message:
                 QtGui.QMessageBox.critical(self,"", "Could not delete all selected entries. Make sure you have write permission for the corresponding files.", QtGui.QMessageBox.Ok)
             
-
     def close_selected(self):
         selected = self.selectedIndexes()
         for index in selected:

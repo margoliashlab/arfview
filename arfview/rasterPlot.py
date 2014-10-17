@@ -30,7 +30,6 @@ class rasterPlot(pg.PlotItem):
         self.graph_item = pg.GraphItem(pos=pos,adj=adj,size=0)
         self.addItem(self.graph_item)
         self.setMouseEnabled(y=False)
-
     # def add_trial(self, toes):
     #     self.ntrials += 1
     #     for idx, t in enumerate(toes):
