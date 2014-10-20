@@ -13,20 +13,20 @@ import numpy as np
 from scipy.io import wavfile
 import os.path
 import tempfile
-from arfview.datatree import DataTreeView, createtemparf, named_types
-import arfview.utils as utils
+from _arfview.datatree import DataTreeView, createtemparf, named_types
+import _arfview.utils as utils
 QtCore.qInstallMsgHandler(lambda *args: None) # suppresses PySide 1.2.1 bug
 from scipy.interpolate import interp2d
 import scipy.signal
-from arfview.labelPlot import labelPlot
-from arfview.treeToolBar import treeToolBar
-from arfview.settingsPanel import settingsPanel
-from arfview.rasterPlot import rasterPlot
-from arfview.downsamplePlot import downsamplePlot
-from arfview.spectrogram import spectrogram
-from arfview.plotScrollArea import plotScrollArea
-from arfview.treemodel import *
-from arfview.exportPlotWindow import exportPlotWindow
+from _arfview.labelPlot import labelPlot
+from _arfview.treeToolBar import treeToolBar
+from _arfview.settingsPanel import settingsPanel
+from _arfview.rasterPlot import rasterPlot
+from _arfview.downsamplePlot import downsamplePlot
+from _arfview.spectrogram import spectrogram
+from _arfview.plotScrollArea import plotScrollArea
+from _arfview.treemodel import *
+from _arfview.exportPlotWindow import exportPlotWindow
 import argparse
 import arf
 import libtfr

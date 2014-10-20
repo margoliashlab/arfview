@@ -4,7 +4,7 @@ import sys
 import pyqtgraph as pg
 import numpy as np
 from utils import replace_dataset
-import arfview.utils as utils
+import _arfview.utils as utils
 import h5py
 import arf
 import pyqtgraph.functions as fn
