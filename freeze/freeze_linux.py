@@ -10,7 +10,7 @@ import traceback
 
 sys.path.append('/usr/lib/python2.7/')
 sys.path.append('/usr/local/lib/python2.7/dist_packages')
-buildOptions = dict(packages= ['PySide','atexit','numpy','libtfr','arf',
+buildOptions = dict(packages= ['PySide','atexit','numpy','libtfr','arf', '_arfview',
                                 'scipy','sys','os','pyqtgraph','tempfile', 'signal', 'arfx','ewave'],
                     excludes = ["Tkinter", "Tkconstants", "tcl"],
                     copy_dependent_files=True,
