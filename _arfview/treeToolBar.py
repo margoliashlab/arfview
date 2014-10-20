@@ -1,6 +1,6 @@
 from PySide import QtCore,QtGui
 import pyqtgraph as pg
-from arfview import datatree
+from _arfview import datatree
 import numpy as np
 
 class treeToolBar(QtGui.QToolBar):
