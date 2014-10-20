@@ -43,12 +43,11 @@ def test():
 def main():
 
     buildOptions = dict(packages = ['PySide','PySide.QtCore','PySide.QtGui','atexit',
-                                    'numpy','libtfr','arf','arfview', 'scipy', '_arfview'
+                                    'numpy','libtfr','arf','arfview', 'scipy',
                                     'scipy.signal', 'scipy.interpolate', 'sys', 'os',
                                     'pyqtgraph','tempfile', 'signal', 'arfx', 'ewave'],
                         excludes = ["Tkinter", "Tkconstants", "tcl"],
                         copy_dependent_files=True)
-
     base = 'Win32GUI' if sys.platform=='win32' else None
 
 
