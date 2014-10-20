@@ -5,8 +5,6 @@ import io
 import os
 import sys
 
-import arfview
-
 here = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -35,14 +33,15 @@ class PyTest(TestCommand):
 
 setup(
         name='arfview',
-        entry_points={'console_scripts':'arfview=arfview.mainwin:main'},
-        url='http://github.com/kylerbrown/arfview/',
+        entry_points={'console_scripts':'arfview=_arfview.mainwin:main'},
+        url='http://github.com/margoliashlab/arfview/',
         license='MIT License',
-        author='Kyler Brown',
+        author='Peter Malonis & Kyler Brown',
+        
         tests_require=['pytest'],
         install_requires=['pyqtgraph>=0.9.7',
                           'lbl>=0.1.1',
-                          'PySide',
+                          #'PySide',
                           'h5py',
                           'scipy',
                           'numpy',
@@ -55,10 +54,9 @@ setup(
         author_email='kylerjbrown@gmail.com',
         description='a data visualization program for arf files',
         long_description=long_description,
-        packages=['arfview'],
+        packages=['_arfview'],
         include_package_data=True,
         platforms='any',
-        test_suite='arfview.test.test_arfview',
         classifiers=[
                 'Programming Language :: Python',
                 'Development Status :: 4 - Beta',
