@@ -5,6 +5,7 @@ import subprocess
 import os
 import sys
 import traceback
+
 # Dependencies are automatically detected, but some
 # might still need to be copied manually into the build directory.
 
@@ -20,7 +21,7 @@ base = 'Win32GUI' if sys.platform=='win32' else None
         
 
 executables = [
-    Executable('../arfview/mainwin.py', base=base, targetName='arfview')
+    Executable('../_arfview/mainwin.py', base=base, targetName='arfview')
 ]
 
 try:

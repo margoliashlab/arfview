@@ -52,7 +52,7 @@ def main():
 
 
     executables = [
-        Executable('../arfview/mainwin.py', base=base, targetName='arfview')
+        Executable('../_arfview/mainwin.py', base=base, targetName='arfview')
     ]
 
     mac_options = dict(bundle_name = 'arfview')
