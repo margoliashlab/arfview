@@ -41,7 +41,7 @@ setup(
         tests_require=['pytest'],
         install_requires=['pyqtgraph>=0.9.7',
                           'lbl>=0.1.1',
-                          #'PySide',
+                          'PySide',
                           'h5py',
                           'scipy',
                           'numpy',
