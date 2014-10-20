@@ -5,11 +5,12 @@ import subprocess
 import os
 import sys
 import traceback
-# Dependencies are automatically detected, but it might need
-# fine tuning.
+# Dependencies are automatically detected, but some
+# might still need to be copied manually into the build directory.
 
 sys.path.append('/usr/lib/python2.7/')
-buildOptions = dict(packages= ['PySide','atexit','numpy','libtfr','arf','arfview',
+sys.path.append('/usr/local/lib/python2.7/dist_packages')
+buildOptions = dict(packages= ['PySide','atexit','numpy','libtfr','arf',
                                 'scipy','sys','os','pyqtgraph','tempfile', 'signal', 'arfx','ewave'],
                     excludes = ["Tkinter", "Tkconstants", "tcl"],
                     copy_dependent_files=True,
