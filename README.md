@@ -28,16 +28,6 @@ You may also need build dependencies for PySide and HDF5. In Ubuntu/Debian:
     sudo apt-get build-dep python-pyside python-h5py
 
 
-Editing files
--------------
-Arfview can be used to rename and delete entries, create new groups, and move entries between groups both within and 
-between files.  
-
-To rename or delete an entry, or to create a new group within a file or group, right-click the entry and select
-the desired option from the menu that appears.
-
-To move an entry,
-
 Plotting
 --------
 To plot a dataset, select the dataset in the tree on the left-hand side of the window by clicking it with the left
@@ -46,8 +36,19 @@ of the entries between the current selected entry and the entry clicked will be 
 
 Plot Checked Mode
 -----------------
+To plot multiple datasets across groups or files, click the "Plot Checked Mode" button in the toolbar. Then check the datasets you want to plot, and click "Refresh Data View."  To select data based on attributes, select "Check Multiple" in the Tree toolbar.  Later versions will include the capability for more complex queries. 
 
-To plot multiple datasets across groups or files, click the "plot checked mode" button in the toolbar. Then check the datasets you want to plot, and click "Refresh Data View."  To select data based on attributes, select "Check Multiple" in the Tree toolbar.  Later versions will include the capability for more complex queries. 
+Editing files
+-------------
+Arfview can be used to rename and delete entries, create new groups, and copy entries between groups both within and 
+between files.  
+
+To rename or delete an entry, right-click the entry and select the desired option from the menu that appears. 
+
+To create a new group within a file or group, right-click the location where the new group is to reside and select 
+"Create Subgroup."
+
+To copy an entry, simply select it and drag it to the desired location.
 
 Labeling
 --------
@@ -60,5 +61,4 @@ To delete a label, double click on the labels you want to delete and then press 
 
 Exporting data
 --------------
-
 The "Export Checked Data" tool allows you to export the checked datasets as .wav or .csv files.
