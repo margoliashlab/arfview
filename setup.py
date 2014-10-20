@@ -37,7 +37,7 @@ setup(
         url='http://github.com/margoliashlab/arfview/',
         license='MIT License',
         author='Peter Malonis & Kyler Brown',
-        
+        version='0.1.0'
         tests_require=['pytest'],
         install_requires=['pyqtgraph>=0.9.7',
                           'lbl>=0.1.1',
