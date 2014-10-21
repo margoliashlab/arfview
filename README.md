@@ -39,8 +39,8 @@ Plot Checked Mode
 To plot multiple datasets across groups or files, click the "Plot Checked Mode" button in the toolbar. Then check the datasets you want to plot, and click "Refresh Data View."  To select data based on attributes, select "Check Multiple" in the Tree toolbar.  Later versions will include the capability for more complex queries. 
 
 Changing the View Range and Zoom
------------------------
-There are three ways to change the view range in arfview.
+--------------------------------
+There are three ways to change the view range in arfview:
 
 1) *Mouse*. Hold down the left mouse button and drag the mouse to change the view range.  Hold down the right
 mouse button to change the zoom.
