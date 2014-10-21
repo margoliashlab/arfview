@@ -78,6 +78,10 @@ class MainWindow(QtGui.QMainWindow):
         openAction.setStatusTip('Open an arf file')
         openAction.triggered.connect(self.showDialog)
 
+        newAction = QtGui.QAction('New', self)
+        newAction.setStatusTip('Create new file')
+        newAction.triggered.connect(self.new)
+
         exportAction = QtGui.QAction(QtGui.QIcon.fromTheme('document-save-as'),
                                     'Export Checked Data', self)
         exportAction.setShortcut('Ctrl+e')
@@ -134,6 +138,7 @@ class MainWindow(QtGui.QMainWindow):
         self.toolbar = self.addToolBar('Toolbar')
         self.toolbar.addAction(exitAction)
         self.toolbar.addAction(openAction)
+        self.toolbar.addAction(newAction)
         self.toolbar.addAction(soundAction)
         self.toolbar.addAction(exportAction)
         self.toolbar.addAction(exportPlotAction)
@@ -170,10 +175,13 @@ class MainWindow(QtGui.QMainWindow):
         #settings panel
         self.settings_panel = settingsPanel()
 
+        #error message
+        self.error_message = QtGui.QErrorMessage(parent=self)
+        self.error_message.setFixedSize(500,200)
         # final steps
         self.area = pgd.DockArea()
         tree_dock = pgd.Dock("Tree", size=(250, 100))
-        data_dock = pgd.Dock("Data", size=(500, 200))
+        data_dock = pgd.Dock("Data", size=(400, 100))
         attr_table_dock = pgd.Dock("Attributes", size=(200, 50))
         settings_dock = pgd.Dock('Settings', size=(150,1))
         self.area.addDock(tree_dock, 'left')
@@ -213,12 +221,17 @@ class MainWindow(QtGui.QMainWindow):
             self.plotcheckedAction.setIconText('Check Mode Is Off')
             self.addPlotAction.setVisible(False)
 
+    def new(self):
+        fname, fileextension = QtGui.QFileDialog.\
+                               getSaveFileName(self, 'Save file', '.', '*.arf')
+        self.tree_model.insertFile(fname, mode='w')
+
     def exportPlot(self):
         exportWin = exportPlotWindow(self.data_layout.centralWidget)
         exportWin.exec_()
 
     def export(self):
-        items = self.tree_view.all_checked_dataset_elements()
+        items = self.tree_model.getCheckedDatasets()
         if not items: return
         savedir, filename = os.path.split(items[0].file.filename)
         savepath =  os.path.join(savedir,os.path.splitext(filename)[0]
@@ -473,7 +486,8 @@ class MainWindow(QtGui.QMainWindow):
         self.data_layout.setMinimumHeight(len(self.subplots)*(minPlotHeight+spacing))
         QApplication.restoreOverrideCursor()
         if unplotable:
-            QtGui.QMessageBox.warning(self,"", "Could not plot the following datasets: %s" %('\n'.join(unplotable)), QtGui.QMessageBox.Ok)
+            self.error_message.showMessage("Could not plot the following datasets: %s" %('\n'.join(unplotable)),
+            "plot_error")
 
 ## Make all plots clickable
 lastClicked = []
@@ -529,20 +543,17 @@ def interpolate_spectrogram(spec, res_factor):
     return new_spec
     
 def main():
-    p = argparse.ArgumentParser(prog='arfview')
-    p.add_argument('file_names', nargs='*',default=[])
-    options = p.parse_args()
+    # p = argparse.ArgumentParser(prog='arfview')
+    # p.add_argument('file_names', nargs='*',default=[])
+    # options = p.parse_args()
     signal.signal(signal.SIGINT, sigint_handler)
     app = QtGui.QApplication(sys.argv)
     app.setApplicationName('arfview')
     timer = QtCore.QTimer()
     timer.start(500)  # You may change this if you wish.
     timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
-    with MainWindow(options.file_names) as mainWin:
+    with MainWindow([]) as mainWin:
         sys.exit(app.exec_())
-
-    #if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-    #    QtGui.QApplication.instance().exec_()
 
 if __name__=='__main__':
     main()
