@@ -28,18 +28,37 @@ You may also need build dependencies for PySide and HDF5. In Ubuntu/Debian:
     sudo apt-get build-dep python-pyside python-h5py
 
 
+Plotting
+--------
+To plot a dataset, select the dataset in the tree on the left-hand side of the window by clicking it with the left
+mouse button.  You can also plot all of the datasets in a group by selecting the group. You can select multiple entries by holding down Ctrl while selecting the entries.  If you press Shift while clicking on an entry, all
+of the entries between the current selected entry and the entry clicked will be selected.
+
 Plot Checked Mode
 -----------------
+To plot multiple datasets across groups or files, click the "Plot Checked Mode" button in the toolbar. Then check the datasets you want to plot, and click "Refresh Data View."  To select data based on attributes, select "Check Multiple" in the Tree toolbar.  Later versions will include the capability for more complex queries. 
 
-To plot multiple datasets across entries or files, click the "plot checked mode" button in the toolbar. Then check the datasets you want to plot, and click "Refresh Data View."  To select data based on attributes, select "Check Multiple" in the Tree toolbar.  Later versions will include the capability for more complex queries. 
+Editing files
+-------------
+Arfview can be used to rename and delete entries, create new groups, and copy entries between groups both within and 
+between files.  
+
+To rename or delete an entry, right-click the entry and select the desired option from the menu that appears. 
+
+To create a new group within a file or group, right-click the location where the new group is to reside and select 
+"Create Subgroup."
+
+To copy an entry, simply select it and drag it to the desired location.
 
 Labeling
 --------
-To add a label to an existing label dataset, hold down a letter key and click on the plot.  A simple label with the name of the key pressed will be added to the plot at the location of the cursor on the time axis.  To label an interval, hold down shift and the letter key, click on the plot at the start time of the label, and then click again at the stop time.  
+To add a label to an existing label dataset, hold down a letter key and click on the plot.  A simple label with the name of the key pressed will be added to the plot at the location of the cursor on the time axis.  To label an interval, hold down shift and the letter key, click on the plot at the start time of the label, and then click again at the stop time.  You can also create an interval label corresponding the current view range by holding down a letter key and then pressing the space bar. 
 
 To add a label dataset, select the entry where you want the label to be added, and press the "Add Label" button on the main toolbar. 
 
+To delete a label, double click on the labels you want to delete and then press the "Delete Selected Label" button on the toolbar.
+
+
 Exporting data
 --------------
-
-The "Export Data" tool allows you to export a selected dataset as a .wav or .csv file.
+The "Export Checked Data" tool allows you to export the checked datasets as .wav or .csv files.
