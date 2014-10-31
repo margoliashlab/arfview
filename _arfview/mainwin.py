@@ -18,7 +18,7 @@ import _arfview.utils as utils
 QtCore.qInstallMsgHandler(lambda *args: None) # suppresses PySide 1.2.1 bug
 from scipy.interpolate import interp2d
 import scipy.signal
-from _arfview.labelPlot import labelPlot
+from labelPlot import labelPlot
 from _arfview.treeToolBar import treeToolBar
 from _arfview.settingsPanel import settingsPanel
 from _arfview.rasterPlot import rasterPlot
@@ -37,8 +37,6 @@ import time
 
 class MainWindow(QtGui.QMainWindow):
     '''the main window of the program'''
-
-
     def __init__(self,file_names):
         super(MainWindow, self).__init__()
         self.file_names = file_names
@@ -403,9 +401,10 @@ class MainWindow(QtGui.QMainWindow):
             elif utils.is_complex_event(dataset):
                 if (self.settings_panel.label_check.checkState()
                     ==QtCore.Qt.Checked):
-                    pl = labelPlot(dataset.file,dataset.name, title=dataset.name, name=str(len(self.subplots)))
+                    pl = labelPlot(dataset.file,dataset.name, name=str(len(self.subplots)))
+                    pl.setLabel('left', dataset.name.split('/')[-1])
                     data_layout.addItem(pl, row=len(self.subplots), col=0) 
-                    pl.showLabel('left', show=False)
+                    #pl.showLabel('left', show=False)
                     pl.sigLabelSelected.connect(self.label_selected)
                     pl.sigNoLabelSelected.connect(self.label_unselected)
                     self.deleteLabelAction.triggered.connect(pl.delete_selected_labels)
@@ -543,16 +542,16 @@ def interpolate_spectrogram(spec, res_factor):
     return new_spec
     
 def main():
-    # p = argparse.ArgumentParser(prog='arfview')
-    # p.add_argument('file_names', nargs='*',default=[])
-    # options = p.parse_args()
+    p = argparse.ArgumentParser(prog='arfview')
+    p.add_argument('file_names', nargs='*',default=[])
+    options = p.parse_args()
     signal.signal(signal.SIGINT, sigint_handler)
     app = QtGui.QApplication(sys.argv)
     app.setApplicationName('arfview')
     timer = QtCore.QTimer()
     timer.start(500)  # You may change this if you wish.
     timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
-    with MainWindow([]) as mainWin:
+    with MainWindow(options.file_names) as mainWin:
         sys.exit(app.exec_())
 
 if __name__=='__main__':

@@ -20,10 +20,12 @@ class labelRegion(pg.LinearRegionItem):
         self.position_text_y()
         self.position_text_x()
         self.setMovable(False)
+        self.getViewBox().sigYRangeChanged.connect(self.position_text_y)
+        #import IPython;IPython.embed()
 
     def position_text_y(self):
         yrange=self.getViewBox().viewRange()[1]
-        self.text.setY(np.mean(yrange))
+        self.text.setY(np.mean(yrange)*1.5)
 
     def position_text_x(self):
         xmin, xmax = self.getViewBox().viewRange()[0]
@@ -55,7 +57,7 @@ class labelPlot(pg.PlotItem):
         self.double_clicked = np.zeros(len(self.lbl),dtype=bool)
         self.installEventFilter(self)
         self.getViewBox().enableAutoRange(enable=False)
-        self.getAxis('left').hide()
+        #self.getAxis('left').hide()
         self.key = None
         self.dclickedRegion = None
         self.activeLabel = None

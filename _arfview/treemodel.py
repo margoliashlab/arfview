@@ -194,8 +194,11 @@ class TreeModel(QtCore.QAbstractItemModel):
                     node.addChild(new_node)
                     TreeModel.populate_tree(new_node, h5obj)
                 else:
+                    datatype = h5obj.attrs.get('datatype')
+                    if isinstance(datatype, np.ndarray):
+                        datatype = datatype[0]
                     new_node = TreeNode(h5obj.name, "Dataset", 
-                                        named_types.get(h5obj.attrs.get('datatype')))
+                                        named_types.get(datatype))
                     node.addChild(new_node)
                     
     def rowCount(self, parent):
@@ -301,7 +304,6 @@ class TreeModel(QtCore.QAbstractItemModel):
         parentEntry = self.getEntry(parentNode)
         success = True
         for node in nodes:
-            print(node.name())
             entry = self.getEntry(node)
             copy_name = entry.name.split('/')[-1]
             number = ''
@@ -376,7 +378,6 @@ class TreeModel(QtCore.QAbstractItemModel):
             del file[node.name()]
             node.parent().removeChild(node.row())
         except:
-            import pdb;pdb.set_trace()
             return False
             
         self.endRemoveRows()
