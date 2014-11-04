@@ -38,6 +38,17 @@ Plot Checked Mode
 -----------------
 To plot multiple datasets across groups or files, click the "Plot Checked Mode" button in the toolbar. Then check the datasets you want to plot, and click "Refresh Data View."  To select data based on attributes, select "Check Multiple" in the Tree toolbar.  Later versions will include the capability for more complex queries. 
 
+Changing the View Range and Zoom
+--------------------------------
+There are three ways to change the view range in arfview:
+
+1) *Mouse*. Hold down the left mouse button and drag the mouse to change the view range.  Hold down the right
+mouse button to change the zoom.
+
+2) *Arrow Keys*.  To use the arrow keys to adjust the zoom, first place the cursor over the plot you want to adjust. Press the down arrow key to double the zoom, and the up arrow key to halve it.  The right and left arrow keys move the view range in the time axis to the right or left (respectively) by the length of the current view window.  To move the range by half a window, hold down the Ctrl key and press the left or right arrow key.
+
+3) *Context Menu*.  When you right click on a plot, a context menu appears that allows you to enter in specific values for the view range.  The menu also allows you to link the y-axes of different plots so that their ranges are always the same (the x-axes of all the plots are always linked).
+
 Editing files
 -------------
 Arfview can be used to rename and delete entries, create new groups, and copy entries between groups both within and 
