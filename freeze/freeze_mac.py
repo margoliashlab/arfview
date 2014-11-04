@@ -5,6 +5,7 @@ import subprocess
 import os
 import sys
 import time
+import tempfile
 build_dir = 'build/arfview.app/Contents/MacOS' 
 
 def listfiles(directory):
@@ -68,11 +69,11 @@ def main():
         subprocess.call('cp -r %s %s' %(h5py_path,build_dir), shell=True)
         import _arfview
         #unzipping arfview egg and copying _arfview folder
-        arfview_egg_path = _arfview.__file__
+        arfview_egg_path = os.path.dirname(os.path.dirname(_arfview.__file__))
         tempdir = tempfile.mkdtemp()
-        subprocess.call('unzip %s -d %s'%(arfview_egg_path, tempdir)) 
+        subprocess.call('unzip %s -d %s'%(arfview_egg_path, tempdir),shell=True) 
         arfview_path = '/'.join([tempdir, '_arfview'])
-        subprocess.call('cp -r %s %s'%(arfview_path,build_dir))
+        subprocess.call('cp -r %s %s'%(arfview_path,build_dir),shell=True)
         shutil.rmtree(tempdir)
         copy_dependencies(build_dir)
 
