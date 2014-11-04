@@ -31,8 +31,6 @@ def copy_dependencies(directory, dest=None):
             except:
                 import pdb;pdb.set_trace()
 
-
-
 def link_dependencies(directory):
     subprocess.check_output('otool -L %s'%(f), shell=True).split()
     
@@ -58,14 +56,24 @@ def main():
     mac_options = dict(bundle_name = 'arfview')
     try:
         setup(name='arfview',
-              version = '1.0',
+              version = '0.1.0',
               description = 't',
               options = dict(build_exe = buildOptions,
                              bdist_mac = mac_options),
               executables = executables)
     finally:
-        subprocess.call('cp -r /Library/Python/2.7/site-packages/h5py %s' %build_dir, 
-                        shell=True)    
+        #manually copying h5py and _arfview because cxfreeze won't copy them
+        import h5py
+        h5py_path = os.path.dirname(h5py.__file__)
+        subprocess.call('cp -r %s %s' %(h5py_path,build_dir), shell=True)
+        import _arfview
+        #unzipping arfview egg and copying _arfview folder
+        arfview_egg_path = _arfview.__file__
+        tempdir = tempfile.mkdtemp()
+        subprocess.call('unzip %s -d %s'%(arfview_egg_path, tempdir)) 
+        arfview_path = '/'.join([tempdir, '_arfview'])
+        subprocess.call('cp -r %s %s'%(arfview_path,build_dir))
+        shutil.rmtree(tempdir)
         copy_dependencies(build_dir)
 
 
