@@ -45,6 +45,7 @@ class MainWindow(QtGui.QMainWindow):
         self.plotchecked = False
         self.initUI()
         
+    #setting up context manager to make sure files get closed
     def __enter__(self):
         return self
 
