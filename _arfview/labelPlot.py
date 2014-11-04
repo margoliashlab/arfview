@@ -21,7 +21,6 @@ class labelRegion(pg.LinearRegionItem):
         self.position_text_x()
         self.setMovable(False)
         self.getViewBox().sigYRangeChanged.connect(self.position_text_y)
-        #import IPython;IPython.embed()
 
     def position_text_y(self):
         yrange=self.getViewBox().viewRange()[1]
