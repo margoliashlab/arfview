@@ -56,6 +56,7 @@ class spectrogram(pg.PlotItem):
 
         #computing and interpolating image
         Pxx = libtfr.stft(dataset,w=window,step=t_step)
+        Pxx[Pxx==0] = np.min(Pxx[Pxx!=0]) #ensures that log won't give -inf
         spec = np.log(Pxx.T)
         res_factor = 1.0 #factor by which resolution is increased
         # spec = interpolate_spectrogram(spec, res_factor=res_factor)
