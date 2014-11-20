@@ -60,9 +60,9 @@ class labelPlot(pg.PlotItem):
         self.key = None
         self.dclickedRegion = None
         self.activeLabel = None
-        if self.lbl.attrs['units'] == 'ms':
+        if 'ms' in self.lbl.attrs['units']:
             self.scaling_factor = 1000
-        elif self.lbl.attrs['units'] == 'samples':
+        elif 'samples' in self.lbl.attrs['units']:
             self.scaling_factor = self.lbl.attrs['sampling_rate']
         else:
             self.scaling_factor = 1
