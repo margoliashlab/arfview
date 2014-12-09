@@ -1,4 +1,6 @@
 * todo list:
 ** TODO enable the modification and creation of attributes
+** TODO enable exporting selection
+** TODO shortcut for selecting next entry
 ** TODO better initial range when item is selected
 ** TODO fix two warning boxes for deleting labels
