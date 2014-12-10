@@ -4,3 +4,5 @@
 ** TODO shortcut for selecting next entry
 ** TODO better initial range when item is selected
 ** TODO fix two warning boxes for deleting labels
+** TODO link y-axis of data with same type
+
