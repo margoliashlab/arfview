@@ -15,7 +15,7 @@ import os.path
 import tempfile
 from _arfview.datatree import DataTreeView, createtemparf, named_types
 import _arfview.utils as utils
-QtCore.qInstallMsgHandler(lambda *args: None) # suppresses PySide 1.2.1 bug
+QtCore.qInstallMsgHandler(lambda *args: None)  # suppresses PySide 1.2.1 bug
 from scipy.interpolate import interp2d
 import scipy.signal
 from _arfview.labelPlot import labelPlot
@@ -33,18 +33,18 @@ import libtfr
 import subprocess
 import lbl
 import time
-#print(lbl.__version__)
+
 
 class MainWindow(QtGui.QMainWindow):
     '''the main window of the program'''
-    def __init__(self,file_names):
+    def __init__(self, file_names):
         super(MainWindow, self).__init__()
         self.file_names = file_names
         self.current_file = None
         self.open_files = []    # TODO replace current_file with list
         self.plotchecked = False
         self.initUI()
-        
+
     #setting up context manager to make sure files get closed
     def __enter__(self):
         return self
@@ -60,8 +60,8 @@ class MainWindow(QtGui.QMainWindow):
         self.statusBar().showMessage('Ready')
 
         # actions
-        soundAction = QtGui.QAction(QtGui.QIcon.fromTheme('media-playback-start'),
-                                    'Play Sound', self)
+        soundAction = QtGui.QAction(QtGui.QIcon.fromTheme(
+            'media-playback-start'), 'Play Sound', self)
         soundAction.setShortcut('Ctrl+S')
         soundAction.setStatusTip('Play data as sound')
         soundAction.triggered.connect(self.playSound)
@@ -123,7 +123,7 @@ class MainWindow(QtGui.QMainWindow):
         addPlotAction.setStatusTip('Add checked datasets to current plot')
         addPlotAction.triggered.connect(self.add_plot)
         self.addPlotAction = addPlotAction
-        
+
         # menubar
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
@@ -146,11 +146,11 @@ class MainWindow(QtGui.QMainWindow):
         self.toolbar.addAction(labelAction)
         self.toolbar.addAction(deleteLabelAction)
         self.toolbar.addAction(addPlotAction)
-        
+
         # tree model
         self.tree_model = TreeModel(self.file_names)
 
-        # tree view 
+        # tree view
         self.tree_view = ArfTreeView()
         self.tree_view.setModel(self.tree_model)
         self.tree_view.pressed.connect(self.selectEntry)
@@ -159,7 +159,7 @@ class MainWindow(QtGui.QMainWindow):
 
         # tree_toolbar
         self.tree_toolbar = treeToolBar(self.tree_model)
-        
+
         #attribute table
         self.attr_table = QtGui.QTableWidget(10, 2)
         self.attr_table.setHorizontalHeaderLabels(('key','value'))
@@ -199,7 +199,7 @@ class MainWindow(QtGui.QMainWindow):
         attr_table_dock.addWidget(self.attr_table)
         settings_dock.addWidget(self.settings_panel)
         self.settings_panel.show()
-        
+
         self.setCentralWidget(self.area)
         self.setWindowTitle('arfview')
         self.resize(1300, 700)
@@ -235,17 +235,25 @@ class MainWindow(QtGui.QMainWindow):
         savedir, filename = os.path.split(items[0].file.filename)
         savepath =  os.path.join(savedir,os.path.splitext(filename)[0]
                                  + '_' + items[0].name.replace('/','_'))
-        fname, fileextension = QtGui.QFileDialog.\
-                               getSaveFileName(self, 'Save data as',
-                                               savepath,
-                                               'wav (*.wav);;text (*.csv, *.dat)')
+
         for i,item in enumerate(items):
             if 'datatype' in item.attrs.keys() and item.attrs['datatype'] < 1000:
-                if i:
-                    fname =  os.path.join(savedir,os.path.splitext(filename)[0]
-                                          + '_' + item.name.replace('/','_'))
-                export(item, fileextension.split(' ')[0], fname)
+                fname, fileextension = QtGui.QFileDialog.\
+                                       getSaveFileName(self, 'Save data as',
+                                                       savepath,
+                                                       'wav (*.wav);;text (*.csv, *.dat)')
+
+            elif 'datatype' in item.attrs.keys() and item.attrs.get('datatype')==2002:
+                fname, fileextension = QtGui.QFileDialog.\
+                                       getSaveFileName(self, 'Save data as',
+                                                       savepath,
+                                                       'lbl (*.lbl)')
+
+            fname =  os.path.join(savedir,os.path.splitext(filename)[0]
+                                      + '_' + item.name.replace('/','_'))
+            export(item, fileextension.split(' ')[0], fname)                
                 
+
     def playSound(self):
         indexes = self.tree_view.selectedIndexes()
         if len(indexes) == 1:
@@ -290,7 +298,7 @@ class MainWindow(QtGui.QMainWindow):
             self.plot_checked_datasets()
         else:
             datasets = []
-            entries = [self.tree_model.getEntry(idx.internalPointer()) for idx 
+            entries = [self.tree_model.getEntry(idx.internalPointer()) for idx
                        in self.tree_view.selectedIndexes()]
             for entry in entries:
                 if type(entry) == h5py.Dataset:
@@ -305,15 +313,15 @@ class MainWindow(QtGui.QMainWindow):
         if len(checked_datasets) > 0 and self.plotchecked:
             new_layout = self.data_layout.addLayout(row=len(self.subplots),col=0)
             self.plot_dataset_list(checked_datasets, new_layout)
- 
 
-    def selectEntry(self, treeItem):
+
+    def selectEntry(self):
         if not self.plotchecked:
             self.refresh_data_view()
-        indexes = self.tree_view.selectedIndexes() 
+
+        indexes = self.tree_view.selectedIndexes()
         if len(indexes) == 1:
             self.labelAction.setVisible(True)
-
             node = indexes[0].internalPointer()
             entry = self.tree_model.getEntry(node)
             self.populateAttrTable(entry)
@@ -342,7 +350,7 @@ class MainWindow(QtGui.QMainWindow):
         elif isinstance(entry, h5py.Dataset):
             lbl_parent = entry.parent
             parentIndex = indexes[0].parent()
-        
+
         self.tree_model.insertLabel(parentIndex)
         self.refresh_data_view()
 
@@ -351,7 +359,15 @@ class MainWindow(QtGui.QMainWindow):
 
     def label_unselected(self):
         self.deleteLabelAction.setVisible(False)
-        
+
+    def keyPressEvent(self, event):
+        '''implements select next entry shortcut'''
+        if (event.key()==QtCore.Qt.Key_F and 
+            event.modifiers() == QtCore.Qt.ControlModifier):
+            self.tree_view.select_next_entry()
+            self.selectEntry()
+            event.accept()
+
     def plot_dataset_list(self, dataset_list, data_layout, append=False):
         ''' plots a list of datasets to a data layout'''
         QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
@@ -369,8 +385,8 @@ class MainWindow(QtGui.QMainWindow):
             '''sampled data'''
             if dataset.attrs.get('datatype') < 1000: # sampled data
                 if (self.settings_panel.oscillogram_check.checkState()
-                    ==QtCore.Qt.Checked):  
-                    
+                    ==QtCore.Qt.Checked):
+
                     pl = downsamplePlot(dataset,
                                         name=str(len(self.subplots)))
                     pl.setLabel('left', dataset.name.split('/')[-1])
@@ -381,7 +397,7 @@ class MainWindow(QtGui.QMainWindow):
                     # xrange = pl.dataItems[0].dataBounds(0)
                     # yrange = pl.dataItems[0].dataBounds(1)
                     # pl.setXRange(*xrange,padding=0)
-                    # pl.setYRange(*yrange,padding=0)                    
+                    # pl.setYRange(*yrange,padding=0)
                     self.subplots.append(pl)
                     pl.showGrid(x=True, y=True)
                 ''' simple events '''
@@ -394,7 +410,7 @@ class MainWindow(QtGui.QMainWindow):
                     data = dataset.value
                 if (self.settings_panel.raster_check.checkState()==QtCore.Qt.Checked or
                     self.settings_panel.psth_check.checkState()==QtCore.Qt.Checked or
-                    self.settings_panel.isi_check.checkState()==QtCore.Qt.Checked):                    
+                    self.settings_panel.isi_check.checkState()==QtCore.Qt.Checked):
                     toes.append(data)
                 continue
 
@@ -404,7 +420,7 @@ class MainWindow(QtGui.QMainWindow):
                     ==QtCore.Qt.Checked):
                     pl = labelPlot(dataset.file,dataset.name, name=str(len(self.subplots)))
                     pl.setLabel('left', dataset.name.split('/')[-1])
-                    data_layout.addItem(pl, row=len(self.subplots), col=0) 
+                    data_layout.addItem(pl, row=len(self.subplots), col=0)
                     #pl.showLabel('left', show=False)
                     pl.sigLabelSelected.connect(self.label_selected)
                     pl.sigNoLabelSelected.connect(self.label_unselected)
@@ -422,12 +438,12 @@ class MainWindow(QtGui.QMainWindow):
                     pl = spectrogram(dataset, self.settings_panel)
                     data_layout.addItem(pl, row=len(self.subplots), col=0)
                     self.subplots.append(pl)
-       
+
  #end for loop
         if toes:
             if self.settings_panel.raster_check.checkState()==QtCore.Qt.Checked:
                 pl= rasterPlot(toes)
-                data_layout.addItem(pl, row=len(self.subplots), col=0) 
+                data_layout.addItem(pl, row=len(self.subplots), col=0)
                 pl.showLabel('left', show=False)
                 self.subplots.append(pl)
 
@@ -450,7 +466,7 @@ class MainWindow(QtGui.QMainWindow):
                 pl.addItem(psth)
                 pl.setMouseEnabled(y=False)
                 self.subplots.append(pl)
-              
+
         if self.settings_panel.isi_check.checkState()==QtCore.Qt.Checked:
             isis = np.zeros(sum(len(t)-1 for t in toes))
             k=0
@@ -461,17 +477,17 @@ class MainWindow(QtGui.QMainWindow):
                 bin_size = float(self.settings_panel.psth_bin_size.text())/1000.
             else:
                 bin_size = .01
-            bins = np.arange(isis.min(),isis.max()+bin_size,bin_size) 
+            bins = np.arange(isis.min(),isis.max()+bin_size,bin_size)
             y,x = np.histogram(isis,bins=bins,normed=True)
             isi_hist = pg.PlotCurveItem(x, y, stepMode=True,
                                     fillLevel=0, brush=(0, 0, 255, 80))
-    
+
             pl = data_layout.addPlot(row=len(self.subplots), col=0)
             pl.addItem(isi_hist)
             pl.setMouseEnabled(y=False)
             self.subplots.append(pl)
 
-        
+
         '''linking x axes'''
         minPlotHeight = 100
         masterXLink = None
@@ -509,6 +525,8 @@ def export(dataset, export_format='wav', savepath=None):
         wavfile.write(savepath + '.wav', dataset.attrs['sampling_rate'], data)
     if export_format == 'text':
         np.savetxt(savepath + '.csv', dataset)
+    if export_format == 'lbl':
+        lbl.write(savepath + '.lbl', dataset[:])
 
 
 def playSound(data, mainWin):
@@ -524,7 +542,7 @@ def playSound(data, mainWin):
         if os.path.exists(play_path):
             subprocess.Popen([play_path, tfile])
             break
-        
+
 
 def sigint_handler(*args):
     """Handler for the SIGINT signal."""
@@ -541,7 +559,7 @@ def interpolate_spectrogram(spec, res_factor):
     new_spec = f(xnew,ynew)
 
     return new_spec
-    
+
 def main():
     p = argparse.ArgumentParser(prog='arfview')
     p.add_argument('file_names', nargs='*',default=[])
