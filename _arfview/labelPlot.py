@@ -61,11 +61,11 @@ class labelPlot(pg.PlotItem):
         self.dclickedRegion = None
         self.activeLabel = None
         if 'ms' in self.lbl.attrs['units']:
-            self.scaling_factor = 1000
+            self.scaling_factor = 1000.
         elif 'samples' in self.lbl.attrs['units']:
-            self.scaling_factor = self.lbl.attrs['sampling_rate']
+            self.scaling_factor = float(self.lbl.attrs['sampling_rate'])
         else:
-            self.scaling_factor = 1
+            self.scaling_factor = 1.
         self.setMouseEnabled(y=False)
         self.max_plotted = 100
         self.getViewBox().sigXRangeChanged.connect(self.plot_all_events)

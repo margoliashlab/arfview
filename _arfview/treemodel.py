@@ -556,6 +556,19 @@ class ArfTreeView(QtGui.QTreeView):
                 QtGui.QMessageBox.critical(self,"", "Could create subgroup. Make sure you have write permission for the corresponding file.", QtGui.QMessageBox.Ok) 
                 
 
+    def select_next_entry(self):
+        selected = self.selectedIndexes()
+        if len(selected) == 1:
+            index = selected[0]
+            parent = index.parent()
+            n_rows = self.model().rowCount(parent)
+            current_row = index.row()
+            if current_row < n_rows - 1:
+                new_index = self.model().index(row=current_row+1,
+                                               column=0,parent=parent)
+                self.clearSelection()
+                self.setCurrentIndex(new_index)
+                
     def onCustomConextMenuRequested(self, pos):
         menu = QtGui.QMenu(self)
         menu.setParent(self)

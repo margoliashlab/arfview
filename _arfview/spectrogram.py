@@ -62,8 +62,8 @@ class spectrogram(pg.PlotItem):
         # spec = interpolate_spectrogram(spec, res_factor=res_factor)
 
         #making color lookup table
-        pos = np.linspace(0,1,7)
-        color = np.array([[100,100,255,255],[0,0,255,255],[0,255,255,255],[0,255,0,255],
+        pos = np.linspace(0,1,6)
+        color = np.array([[0,0,255,255],[0,255,255,255],[0,255,0,255],
                           [255,255,0,255],[255,0,0,255],[100,0,0,255]], dtype=np.ubyte)
         color_map = pg.ColorMap(pos,color)
         lut = color_map.getLookupTable(0.0,1.0,256)

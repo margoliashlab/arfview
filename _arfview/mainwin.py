@@ -118,11 +118,11 @@ class MainWindow(QtGui.QMainWindow):
         deleteLabelAction.setStatusTip('Add label entry to current group')
         self.deleteLabelAction = deleteLabelAction
 
-        addPlotAction = QtGui.QAction('Add Plot', self)
-        addPlotAction.setVisible(False)
-        addPlotAction.setStatusTip('Add checked datasets to current plot')
-        addPlotAction.triggered.connect(self.add_plot)
-        self.addPlotAction = addPlotAction
+        # addPlotAction = QtGui.QAction('Add Plot', self)
+        # addPlotAction.setVisible(False)
+        # addPlotAction.setStatusTip('Add checked datasets to current plot')
+        # addPlotAction.triggered.connect(self.add_plot)
+        # self.addPlotAction = addPlotAction
 
         # menubar
         menubar = self.menuBar()
@@ -145,7 +145,7 @@ class MainWindow(QtGui.QMainWindow):
         self.toolbar.addAction(refreshAction)
         self.toolbar.addAction(labelAction)
         self.toolbar.addAction(deleteLabelAction)
-        self.toolbar.addAction(addPlotAction)
+        #self.toolbar.addAction(addPlotAction)
 
         # tree model
         self.tree_model = TreeModel(self.file_names)
@@ -212,13 +212,13 @@ class MainWindow(QtGui.QMainWindow):
             self.plotcheckedAction.setStatusTip('click to turn check mode off')
             self.plotcheckedAction.setText('Check Mode Is On')
             self.plotcheckedAction.setIconText('Check Mode Is On')
-            self.addPlotAction.setVisible(True)
+            #self.addPlotAction.setVisible(True)
         else:
             self.plotcheckedAction.setIcon(QtGui.QIcon.fromTheme('face-smile'))
             self.plotcheckedAction.setStatusTip('Click to turn check mode on')
             self.plotcheckedAction.setText('Check Mode Is Off')
             self.plotcheckedAction.setIconText('Check Mode Is Off')
-            self.addPlotAction.setVisible(False)
+            #self.addPlotAction.setVisible(False)
 
     def new(self):
         fname, fileextension = QtGui.QFileDialog.\
@@ -393,7 +393,7 @@ class MainWindow(QtGui.QMainWindow):
                     data_layout.addItem(pl,row=len(self.subplots), col=0)
                     # max_default_range = 20
                     # xmax = min(dataset.size/float(dataset.attrs['sampling_rate']),
-                    #            max_default_range)
+                    #            maxb_default_range)
                     # xrange = pl.dataItems[0].dataBounds(0)
                     # yrange = pl.dataItems[0].dataBounds(1)
                     # pl.setXRange(*xrange,padding=0)
