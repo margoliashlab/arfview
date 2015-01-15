@@ -3,15 +3,19 @@ import numpy as np
 import scipy
 import libtfr
 import h5py
+from PySide import QtCore
 
 class spectrogram(pg.PlotItem):
     """pyqtgraph.PlotItem that plots a spectrogram of the data in an arf dataset based on the
     settings in the settings panel"""
     
+    selection_made = QtCore.Signal(pg.PlotItem)
+
     def __init__(self, dataset, settings_panel, *args, **kwargs):
         super(spectrogram, self).__init__(*args, **kwargs)
         self.dataset = dataset
         self.settings_panel = settings_panel
+        self.selection = None #contains pg.LinearRegionItem representing selection if not None
                 #getting spectrogram settings
         sr = float(dataset.attrs['sampling_rate'])
         win_size_text = settings_panel.win_size.text()
@@ -60,7 +64,6 @@ class spectrogram(pg.PlotItem):
         spec = np.log(Pxx.T)
         res_factor = 1.0 #factor by which resolution is increased
         # spec = interpolate_spectrogram(spec, res_factor=res_factor)
-
         #making color lookup table
         pos = np.linspace(0,1,6)
         color = np.array([[0,0,255,255],[0,255,255,255],[0,255,0,255],
@@ -69,7 +72,6 @@ class spectrogram(pg.PlotItem):
         lut = color_map.getLookupTable(0.0,1.0,256)
         img = pg.ImageItem(spec,lut=lut)
         #img.setLevels((-5, 10))
-
 
         self.addItem(img)
         image_scale = t_step/sr/res_factor
@@ -80,3 +82,28 @@ class spectrogram(pg.PlotItem):
         self.setXRange(0, dataset.size / dataset.attrs['sampling_rate'])
         self.setYRange(freq_min/plot_scale, freq_max/plot_scale)
         self.setMouseEnabled(x=True, y=False)
+        self.win_size = win_size #saving values for export selection function
+        self.t_step = t_step 
+        
+    def removeSelection(self):
+        '''Sets selection to None and removes it from display'''
+        if self.selection is not None:
+            self.removeItem(self.selection)
+            self.selection = None
+
+    def mouseDoubleClickEvent(self, event):
+        '''Double click to select portions of spectrogram'''
+        pos = event.scenePos()
+        vb = self.getViewBox()
+        x = vb.mapSceneToView(pos).x()
+        if self.selection is None:
+            self.selection = pg.LinearRegionItem([x, x])
+            self.addItem(self.selection)
+            self.selection_made.emit(self)
+        else:
+            bounds = list(self.selection.getRegion())
+            idx_change = np.argmin(np.abs(x-np.array(self.selection.getRegion())))
+            bounds[idx_change] = x
+            self.selection.setRegion(bounds)
+            
+        

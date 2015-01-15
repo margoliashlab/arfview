@@ -23,7 +23,7 @@ from _arfview.treeToolBar import treeToolBar
 from _arfview.settingsPanel import settingsPanel
 from _arfview.rasterPlot import rasterPlot
 from _arfview.downsamplePlot import downsamplePlot
-from _arfview.spectrogram import spectrogram
+from spectrogram import spectrogram
 from _arfview.plotScrollArea import plotScrollArea
 from _arfview.treemodel import *
 from _arfview.exportPlotWindow import exportPlotWindow
@@ -87,6 +87,13 @@ class MainWindow(QtGui.QMainWindow):
         exportAction.setStatusTip('Export dataset as wav')
         exportAction.triggered.connect(self.export)
 
+        exportSelectionAction = QtGui.QAction('Export Selection', self)
+        exportSelectionAction.setVisible(False)
+        exportSelectionAction.setStatusTip('')
+        exportSelectionAction.triggered.connect(self.export_selection)
+        self.exportSelectionAction = exportSelectionAction
+        self.spec_selected = None
+
         exportPlotAction = QtGui.QAction('Export Plot', self)
         exportPlotAction.setStatusTip('Export Plot')
         exportPlotAction.triggered.connect(self.exportPlot)
@@ -141,6 +148,7 @@ class MainWindow(QtGui.QMainWindow):
         self.toolbar.addAction(soundAction)
         self.toolbar.addAction(exportAction)
         self.toolbar.addAction(exportPlotAction)
+        self.toolbar.addAction(exportSelectionAction)
         self.toolbar.addAction(plotcheckedAction)
         self.toolbar.addAction(refreshAction)
         self.toolbar.addAction(labelAction)
@@ -249,10 +257,19 @@ class MainWindow(QtGui.QMainWindow):
                                                        savepath,
                                                        'lbl (*.lbl)')
 
-            fname =  os.path.join(savedir,os.path.splitext(filename)[0]
-                                      + '_' + item.name.replace('/','_'))
             export(item, fileextension.split(' ')[0], fname)                
                 
+
+    def export_selection(self):
+        fname, fileextension = QtGui.QFileDialog.\
+                               getSaveFileName(self, 'Save data as',
+                                               '',
+                                               'wav (*.wav);;text (*.csv, *.dat)')
+        bounds = np.array(self.spec_selected.selection.getRegion())
+        bounds = np.array(bounds*self.spec_selected.dataset.attrs['sampling_rate'],
+                          dtype = int)
+        export(self.spec_selected.dataset, fileextension.split(' ')[0], fname, 
+               start_idx=bounds[0], stop_idx=bounds[1])
 
     def playSound(self):
         indexes = self.tree_view.selectedIndexes()
@@ -307,6 +324,9 @@ class MainWindow(QtGui.QMainWindow):
                     datasets.extend([x for x in entry.itervalues() if type(x) == h5py.Dataset])
 
             self.plot_dataset_list(datasets, self.data_layout)
+        
+        self.exportSelectionAction.setVisible(False)
+        self.spec_selected = None
 
     def add_plot(self):
         checked_datasets = self.tree_view.all_checked_dataset_elements()
@@ -327,6 +347,14 @@ class MainWindow(QtGui.QMainWindow):
             self.populateAttrTable(entry)
         else:
             self.labelAction.setVisible(False)
+
+    def spectrogramSelection(self, spec_selected):
+        '''Slot that handles selection made on spectrogram'''
+        self.spec_selected = spec_selected
+        for pl in self.subplots:
+            if isinstance(pl, spectrogram) and pl is not spec_selected:
+                pl.removeSelection()
+            self.exportSelectionAction.setVisible(True)
 
     def populateAttrTable(self, item):
         """Populate QTableWidget with attribute values of hdf5 item ITEM"""
@@ -436,6 +464,7 @@ class MainWindow(QtGui.QMainWindow):
                 if (self.settings_panel.spectrogram_check.checkState()
                     ==QtCore.Qt.Checked):
                     pl = spectrogram(dataset, self.settings_panel)
+                    pl.selection_made.connect(self.spectrogramSelection)
                     data_layout.addItem(pl, row=len(self.subplots), col=0)
                     self.subplots.append(pl)
 
@@ -487,7 +516,6 @@ class MainWindow(QtGui.QMainWindow):
             pl.setMouseEnabled(y=False)
             self.subplots.append(pl)
 
-
         '''linking x axes'''
         minPlotHeight = 100
         masterXLink = None
@@ -496,6 +524,11 @@ class MainWindow(QtGui.QMainWindow):
                 masterXLink = pl
             pl.setXLink(masterXLink)
             pl.setMinimumHeight(minPlotHeight)
+
+        if any(isinstance(pl, spectrogram) for pl in self.subplots):
+            self.exportSelectionAction.setVisible(True)
+        else:
+            self.exportSelectionAction.setVisible(False)
 
         spacing = 5
         self.data_layout.centralWidget.layout.setSpacing(spacing)
@@ -517,17 +550,17 @@ def clicked(plot, points):
     lastClicked = points
 
 
-def export(dataset, export_format='wav', savepath=None):
+def export(dataset, export_format='wav', savepath=None, start_idx=None, stop_idx=None):
     if not savepath:
         savepath = os.path.basename(dataset.name)
     if export_format == 'wav':
-        data = np.int16(dataset.value / max(abs(dataset.value)) * (2**15 - 1))
+        data = np.int16(dataset[start_idx:stop_idx] / 
+                        max(abs(dataset[start_idx:stop_idx])) * (2**15 - 1))
         wavfile.write(savepath + '.wav', dataset.attrs['sampling_rate'], data)
     if export_format == 'text':
         np.savetxt(savepath + '.csv', dataset)
     if export_format == 'lbl':
-        lbl.write(savepath + '.lbl', dataset[:])
-
+        lbl.write(savepath + '.lbl', dataset[start_idx:stop_idx])
 
 def playSound(data, mainWin):
     tfile = tempfile.mktemp() + '_' + data.name.replace('/', '_') + '.wav'
@@ -542,7 +575,6 @@ def playSound(data, mainWin):
         if os.path.exists(play_path):
             subprocess.Popen([play_path, tfile])
             break
-
 
 def sigint_handler(*args):
     """Handler for the SIGINT signal."""

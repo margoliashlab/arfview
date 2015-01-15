@@ -161,7 +161,6 @@ class labelPlot(pg.PlotItem):
                 self.double_clicked = np.zeros(len(self.lbl),dtype=bool)
                 self.plot_all_events()
                 self.sigNoLabelSelected.emit()
-            
 
     def add_label(self, name, start, stop):
         """adds label to plot if possible.  Returns the index of the new label in the sorted dataset"""        
@@ -231,7 +230,6 @@ class labelPlot(pg.PlotItem):
                     self.lbl[i] = (self.lbl[i]['name'], self.lbl[i]['start'], t)
                 else:
                     self.lbl[i] =  (self.lbl[i]['name'], t, self.lbl[i]['stop'])
-
                 self.sort_lbl()
                 self.plot_all_events()
                 self.activeLabel = None
