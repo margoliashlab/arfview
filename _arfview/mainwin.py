@@ -23,7 +23,7 @@ from _arfview.treeToolBar import treeToolBar
 from _arfview.settingsPanel import settingsPanel
 from _arfview.rasterPlot import rasterPlot
 from _arfview.downsamplePlot import downsamplePlot
-from spectrogram import spectrogram
+from _arfview.spectrogram import spectrogram
 from _arfview.plotScrollArea import plotScrollArea
 from _arfview.treemodel import *
 from _arfview.exportPlotWindow import exportPlotWindow
