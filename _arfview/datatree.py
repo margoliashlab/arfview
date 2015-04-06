@@ -68,6 +68,7 @@ def createtemparf(filename, datatype=0):
             arf.create_dataset(arffile, dataset_name, pcmseqfile.read(),
                                sampling_rate=pcmseqfile.sampling_rate, 
                                timestamp=pcmseqfile.timestamp, datatype=datatype)
+            pcmseqfile.entry += 1
             
 
     return arffile['/']
