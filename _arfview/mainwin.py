@@ -282,7 +282,7 @@ class MainWindow(QtGui.QMainWindow):
         #added because not all of arfx compiles on OS X
         try:
             from arfx import pcmio
-            extensions += ' *.pcm'
+            extensions += ' *.pcm *.pcm_seq2'
         except ImportError:
             pass
 
