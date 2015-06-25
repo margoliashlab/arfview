@@ -25,7 +25,7 @@ from _arfview.rasterPlot import rasterPlot
 from _arfview.downsamplePlot import downsamplePlot
 from _arfview.spectrogram import spectrogram
 from _arfview.plotScrollArea import plotScrollArea
-from _arfview.treemodel import *
+from treemodel import *
 from _arfview.exportPlotWindow import exportPlotWindow
 import argparse
 import arf
@@ -396,6 +396,12 @@ class MainWindow(QtGui.QMainWindow):
             self.selectEntry()
             event.accept()
 
+        elif (event.key()==QtCore.Qt.Key_F and 
+              event.modifiers() == (QtCore.Qt.ControlModifier | QtCore.Qt.ShiftModifier)):
+            self.tree_view.select_entry_in_next_parent()
+            self.selectEntry()
+            event.accept()
+
     def plot_dataset_list(self, dataset_list, data_layout, append=False):
         ''' plots a list of datasets to a data layout'''
         QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
@@ -460,7 +466,7 @@ class MainWindow(QtGui.QMainWindow):
                 continue
 
             '''adding spectrograms'''
-            if dataset.attrs.get('datatype') in (0,1): # show spectrogram
+            if dataset.attrs.get('datatype') in (0,1,23): # show spectrogram
                 if (self.settings_panel.spectrogram_check.checkState()
                     ==QtCore.Qt.Checked):
                     pl = spectrogram(dataset, self.settings_panel)
