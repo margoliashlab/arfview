@@ -1,8 +1,4 @@
 * todo list:
-** TODO enable the modification and creation of attributes
-** TODO enable exporting selection
-** TODO shortcut for selecting next entry
-** TODO better initial range when item is selected
-** TODO fix two warning boxes for deleting labels
+** TODO better initial range when item is selected - specfically for spectrograms
 ** TODO link y-axis of data with same type
 
