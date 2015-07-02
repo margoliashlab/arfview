@@ -23,9 +23,9 @@ from _arfview.treeToolBar import treeToolBar
 from _arfview.settingsPanel import settingsPanel
 from _arfview.rasterPlot import rasterPlot
 from _arfview.downsamplePlot import downsamplePlot
-from _arfview.spectrogram import spectrogram
+from spectrogram import spectrogram
 from _arfview.plotScrollArea import plotScrollArea
-from treemodel import *
+from _arfview.treemodel import *
 from _arfview.exportPlotWindow import exportPlotWindow
 import argparse
 import arf
@@ -543,6 +543,7 @@ class MainWindow(QtGui.QMainWindow):
         if unplotable:
             self.error_message.showMessage("Could not plot the following datasets: %s" %('\n'.join(unplotable)),
             "plot_error")
+
 
 ## Make all plots clickable
 lastClicked = []
