@@ -469,7 +469,7 @@ class MainWindow(QtGui.QMainWindow):
             if dataset.attrs.get('datatype') in (0,1,23): # show spectrogram
                 if (self.settings_panel.spectrogram_check.checkState()
                     ==QtCore.Qt.Checked):
-                    pl = spectrogram(dataset, self.settings_panel)
+                    pl = spectrogram.fromSettingsPanel(dataset, self.settings_panel)
                     pl.selection_made.connect(self.spectrogramSelection)
                     data_layout.addItem(pl, row=len(self.subplots), col=0)
                     self.subplots.append(pl)
@@ -544,7 +544,7 @@ class MainWindow(QtGui.QMainWindow):
             self.error_message.showMessage("Could not plot the following datasets: %s" %('\n'.join(unplotable)),
             "plot_error")
 
-
+        
 ## Make all plots clickable
 lastClicked = []
 
