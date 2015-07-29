@@ -72,4 +72,8 @@ To delete a label, double click on the labels you want to delete and then press 
 
 Exporting data
 --------------
-The "Export Checked Data" tool allows you to export the checked datasets as .wav or .csv files.
+*Whole Datasets*
+The "Export Checked Data" tool allows you to export the checked datasets as .wav or .csv files. 
+
+*Selection from dataset*
+To export a portion of a dataset, plot plot it as a oscillogram or spectrogram, and then double click on the plot. A line will appear on the plot. Click and drag the line to create a shaded region on the plot, and adjust the edges of the region to the selection you want to export. Then click "Export Selection" on the main toolbar.
