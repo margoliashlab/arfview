@@ -34,6 +34,8 @@ To plot a dataset, select the dataset in the tree on the left-hand side of the w
 mouse button.  You can also plot all of the datasets in a group by selecting the group. You can select multiple entries by holding down Ctrl while selecting the entries.  If you press Shift while clicking on an entry, all
 of the entries between the current selected entry and the entry clicked will be selected.
 
+You can also switch the selected dataset using keyboard shortcuts. If a single dataset or group is selected, Ctrl+F moves the selection to the next entry. If a single dataset is selected within a group, Ctrl+Shift+F selects the next dataset in the file with the same name. 
+
 Plot Checked Mode
 -----------------
 To plot multiple datasets across groups or files, click the "Plot Checked Mode" button in the toolbar. Then check the datasets you want to plot, and click "Refresh Data View."  To select data based on attributes, select "Check Multiple" in the Tree toolbar.  Later versions will include the capability for more complex queries. 
@@ -77,3 +79,6 @@ The "Export Checked Data" tool allows you to export the checked datasets as .wav
 
 *Selection from dataset*
 To export a portion of a dataset, plot plot it as a oscillogram or spectrogram, and then double click on the plot. A line will appear on the plot. Click and drag the line to create a shaded region on the plot, and adjust the edges of the region to the selection you want to export. Then click "Export Selection" on the main toolbar.
+
+Changing the position of the windows
+------------------------------------
