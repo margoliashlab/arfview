@@ -23,7 +23,7 @@ from _arfview.treeToolBar import treeToolBar
 from _arfview.settingsPanel import settingsPanel
 from _arfview.rasterPlot import rasterPlot
 from _arfview.downsamplePlot import downsamplePlot
-from _arfview.spectrogram import spectrogram
+from spectrogram import spectrogram
 from _arfview.plotScrollArea import plotScrollArea
 from _arfview.treemodel import *
 from _arfview.exportPlotWindow import exportPlotWindow
@@ -282,7 +282,7 @@ class MainWindow(QtGui.QMainWindow):
         #added because not all of arfx compiles on OS X
         try:
             from arfx import pcmio
-            extensions += ' *.pcm'
+            extensions += ' *.pcm *.pcm_seq2'
         except ImportError:
             pass
 
@@ -396,6 +396,12 @@ class MainWindow(QtGui.QMainWindow):
             self.selectEntry()
             event.accept()
 
+        elif (event.key()==QtCore.Qt.Key_F and 
+              event.modifiers() == (QtCore.Qt.ControlModifier | QtCore.Qt.ShiftModifier)):
+            self.tree_view.select_entry_in_next_parent()
+            self.selectEntry()
+            event.accept()
+
     def plot_dataset_list(self, dataset_list, data_layout, append=False):
         ''' plots a list of datasets to a data layout'''
         QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
@@ -460,10 +466,10 @@ class MainWindow(QtGui.QMainWindow):
                 continue
 
             '''adding spectrograms'''
-            if dataset.attrs.get('datatype') in (0,1): # show spectrogram
+            if dataset.attrs.get('datatype') in (0,1,23): # show spectrogram
                 if (self.settings_panel.spectrogram_check.checkState()
                     ==QtCore.Qt.Checked):
-                    pl = spectrogram(dataset, self.settings_panel)
+                    pl = spectrogram.fromSettingsPanel(dataset, self.settings_panel)
                     pl.selection_made.connect(self.spectrogramSelection)
                     data_layout.addItem(pl, row=len(self.subplots), col=0)
                     self.subplots.append(pl)
@@ -538,6 +544,7 @@ class MainWindow(QtGui.QMainWindow):
             self.error_message.showMessage("Could not plot the following datasets: %s" %('\n'.join(unplotable)),
             "plot_error")
 
+        
 ## Make all plots clickable
 lastClicked = []
 

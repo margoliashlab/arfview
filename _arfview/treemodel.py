@@ -568,6 +568,38 @@ class ArfTreeView(QtGui.QTreeView):
                                                column=0,parent=parent)
                 self.clearSelection()
                 self.setCurrentIndex(new_index)
+
+    def select_entry_in_next_parent(self):
+        '''Selects the entry in the next parent group that has the same name as the 
+        currently selected entry, if such an entry exists. If it does not exists, the
+        function checks the remaining groups at the same level as the initial parent, 
+        and if an entry with the same name is found in any of them, it is selected'''
+        selected = self.selectedIndexes()
+        if len(selected) == 1:
+            index = selected[0]
+            node = index.internalPointer()
+            parent = index.parent()
+
+            if parent is None: 
+                return
+
+            grandparent = parent.parent()
+            n_parent_rows = self.model().rowCount(grandparent)
+            parent_row = parent.row()
+            for parent_row in range(parent.row()+1, n_parent_rows-1):
+                new_parent = self.model().index(row=parent_row,
+                                               column=0,
+                                                parent=grandparent)
+                n_rows = self.model().rowCount(new_parent)
+                for row in range(0, n_rows):
+                    new_index = self.model().index(row=row,
+                                                   column=0,
+                                                   parent=new_parent)
+                    new_node = new_index.internalPointer()
+                    if new_node.name().split('/')[-1] == node.name().split('/')[-1]:
+                        self.clearSelection()
+                        self.setCurrentIndex(new_index)
+                        return
                 
     def onCustomConextMenuRequested(self, pos):
         menu = QtGui.QMenu(self)

@@ -1,8 +1,6 @@
 * todo list:
-** TODO enable the modification and creation of attributes
-** TODO enable exporting selection
-** TODO shortcut for selecting next entry
-** TODO better initial range when item is selected
-** TODO fix two warning boxes for deleting labels
-** TODO link y-axis of data with same type
+** settings window with choices of plot for each datatype
+** filters for oscillograms (and spectrograms?)
+** better initial range when item is selected - specfically for spectrograms
+** link y-axis of data with same type
 
