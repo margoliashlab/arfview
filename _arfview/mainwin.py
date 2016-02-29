@@ -23,7 +23,7 @@ from _arfview.treeToolBar import treeToolBar
 from _arfview.settingsPanel import settingsPanel
 from _arfview.rasterPlot import rasterPlot
 from _arfview.downsamplePlot import downsamplePlot
-from spectrogram import spectrogram
+from _arfview.spectrogram import spectrogram
 from _arfview.plotScrollArea import plotScrollArea
 from _arfview.treemodel import *
 from _arfview.exportPlotWindow import exportPlotWindow
@@ -396,8 +396,9 @@ class MainWindow(QtGui.QMainWindow):
             self.selectEntry()
             event.accept()
 
-        elif (event.key()==QtCore.Qt.Key_F and 
-              event.modifiers() == (QtCore.Qt.ControlModifier | QtCore.Qt.ShiftModifier)):
+        elif (event.key() == QtCore.Qt.Key_Return or
+              (event.key()==QtCore.Qt.Key_F and
+               event.modifiers() == (QtCore.Qt.ControlModifier | QtCore.Qt.ShiftModifier | QtCore.Qt.AltModifier))):
             self.tree_view.select_entry_in_next_parent()
             self.selectEntry()
             event.accept()
