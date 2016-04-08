@@ -14,7 +14,11 @@ A compiled stand-alone application for 64-bit Linux and OS X 10.9 can be downloa
 
 Building from source (Linux and OS X)
 --------------------
-  * Install [Anaconda](https://store.continuum.io/cshop/anaconda/).
+  * Install [Anaconda](https://store.continuum.io/cshop/anaconda/). Select Python 2.7.
+
+        conda update conda
+        conda install pyside numpy h5py scipy pyqtgraph libgfortran==1.0 setuptools==19.2
+  
   * In a new terminal window, install arfview:
 
         git clone https://github.com/margoliashlab/arfview.git
