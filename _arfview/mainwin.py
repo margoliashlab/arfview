@@ -242,11 +242,10 @@ class MainWindow(QtGui.QMainWindow):
     def export(self):
         items = self.tree_model.getCheckedDatasets()
         if not items: return
-        savedir, filename = os.path.split(items[0].file.filename)
-        savepath = os.path.join(savedir, os.path.splitext(filename)[0] + '_' +
-                                items[0].name.replace('/', '_'))
-
-        for i, item in enumerate(items):
+        for item in items:
+            savedir, filename = os.path.split(item.file.filename)
+            savepath = os.path.join(savedir, os.path.splitext(filename)[0] + '_' +
+                                    item.name.replace('/', '_'))
             if 'datatype' in item.attrs.keys() and item.attrs[
                     'datatype'] < 1000:
                 fname, fileextension = QtGui.QFileDialog.\
