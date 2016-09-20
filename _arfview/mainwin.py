@@ -27,6 +27,7 @@ from _arfview.spectrogram import spectrogram
 from _arfview.plotScrollArea import plotScrollArea
 from _arfview.treemodel import *
 from _arfview.exportPlotWindow import exportPlotWindow
+from _arfview import __version__
 import argparse
 import arf
 import libtfr
@@ -643,7 +644,13 @@ def interpolate_spectrogram(spec, res_factor):
 def main():
     p = argparse.ArgumentParser(prog='arfview')
     p.add_argument('file_names', nargs='*', default=[])
+    p.add_argument("-v", "--version",
+            action="store_true",
+            help="Prints version number")
     options = p.parse_args()
+    if options.version:
+        print(__version__)
+        return
     signal.signal(signal.SIGINT, sigint_handler)
     app = QtGui.QApplication(sys.argv)
     app.setApplicationName('arfview')

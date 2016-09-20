@@ -4,7 +4,7 @@ from setuptools.command.test import test as TestCommand
 import io
 import os
 import sys
-
+from _arfview import __version__
 here = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -38,7 +38,7 @@ setup(name='arfview',
       url='http://github.com/margoliashlab/arfview/',
       license='MIT License',
       author='Peter Malonis & Kyler Brown',
-      version='1.2.1',
+      version=__version__,
       tests_require=['pytest'],
       install_requires=['pyqtgraph>=0.9.7', 'lbl>=0.1.1', 'h5py',
                         'scipy', 'numpy', 'arf>=2.0.0', 'libtfr>=1.0.3',
